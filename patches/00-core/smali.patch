@@ -1,0 +1,63 @@
+--- a/com/xiaomi/fitness/FitnessApp.smali
++++ b/com/xiaomi/fitness/FitnessApp.smali
+@@ -239,6 +239,8 @@
+ 
+     invoke-super {p0}, Lcom/xiaomi/fitness/Hilt_FitnessApp;->onCreate()V
+ 
++    invoke-static {p0}, Lcom/markus/Settings;->init(Landroid/content/Context;)V
++
+     sget-object v0, Lcom/xiaomi/fitness/helper/CrashHandler;->Companion:Lcom/xiaomi/fitness/helper/CrashHandler$Companion;
+ 
+     invoke-virtual {v0}, Lcom/xiaomi/fitness/helper/CrashHandler$Companion;->getInstance()Lcom/xiaomi/fitness/helper/CrashHandler;
+--- a/com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel.smali
++++ b/com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel.smali
+@@ -388,7 +388,9 @@
+ 
+ # virtual methods
+ .method public final createSettingItems(I)V
+-    .locals 6
++    .locals 7
++
++    move v6, p1
+ 
+     sget-object v0, Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager;->Companion:Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager$Companion;
+ 
+@@ -547,6 +549,10 @@
+ 
+     :cond_6
+     :goto_3
++    iget-object v1, p0, Lcom/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel;->settingTabItems:Landroidx/databinding/ObservableArrayList;
++
++    invoke-static {v1, v6}, Lcom/markus/a;->insertSubMenus(Landroidx/databinding/ObservableArrayList;I)V
++
+     return-void
+ .end method
+ 
+--- a/com/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel.smali
++++ b/com/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel.smali
+@@ -5999,6 +5999,14 @@
+ 
+     invoke-interface {v1, v3}, Lcom/xiaomi/fitness/notify/export/NotificationManagerExportInter;->updateNotificationRemind(Z)V
+ 
++    iget-object v1, v0, Lcom/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel;->settingTabItems:Landroidx/databinding/ObservableArrayList;
++
++    iget-object v2, v0, Lcom/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel;->marketTabItems:Landroidx/databinding/ObservableArrayList;
++
++    iget-object v3, v0, Lcom/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel;->tabItems:Landroidx/databinding/ObservableArrayList;
++
++    invoke-static {v1, v2, v3}, Lcom/markus/a;->insertMenus(Landroidx/databinding/ObservableArrayList;Landroidx/databinding/ObservableArrayList;Landroidx/databinding/ObservableArrayList;)V
++
+     return-void
+ .end method
+ 
+--- a/com/xiaomi/fitness/main/MainActivity.smali
++++ b/com/xiaomi/fitness/main/MainActivity.smali
+@@ -6676,6 +6676,8 @@
+ 
+     invoke-super {p0, p1}, Lcom/xiaomi/fitness/main/Hilt_MainActivity;->onCreate(Landroid/os/Bundle;)V
+ 
++    invoke-static {p0}, Lcom/markus/Settings;->init(Landroid/content/Context;)V
++
+     const/4 v0, 0x1
+ 
+     const/4 v1, 0x0

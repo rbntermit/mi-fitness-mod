@@ -1,0 +1,2 @@
+<string name="markus_phone_steps_off">Не учитывать шаги телефона</string>
+<string name="markus_phone_steps_off_summary">Шаги только с браслета, чтобы они не считались дважды. После переключения перезапустите приложение</string>

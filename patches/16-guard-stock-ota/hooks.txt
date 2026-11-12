@@ -1,0 +1,535 @@
+# Patch 16: the stock firmware update works as in the original unless com.markus.ota.StockOtaPolicy blocks the
+# offer (reflashed band, other branch, not newer, unreadable). Turned into a patch by scripts/make_hooks.pl.
+
+# ---- 1. Offers and forced updates: the server answer is used only when the policy allows it
+CLASS com/mi/fitness/checkupdate/model/LatestVersion
+METHOD isNeedUpdate()Z
+TEMPS 1
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/model/LatestVersion
+METHOD getForce()Z
+TEMPS 1
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/model/OtaUpgradeResult
+METHOD isNeedUpdate()Z
+TEMPS 1
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/model/OtaUpgradeResult
+METHOD isForce()Z
+TEMPS 1
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_ota_stock
+
+# ---- 2. Offer dialogs: not shown for a blocked offer
+CLASS com/mi/fitness/checkupdate/util/CheckUpdateManagerImpl
+METHOD showFirmwareUpdateDialog(Landroid/content/Context;ZLjava/io/Serializable;)V
+TEMPS 1
+CODE
+    invoke-static {p3}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/util/CheckUpdateManagerImpl
+METHOD showWatchUpdateDialog(Landroid/content/Context;ZLjava/io/Serializable;)V
+TEMPS 1
+CODE
+    invoke-static {p3}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/util/CheckUpdateManagerImpl
+METHOD showUpdateDialog(Landroid/content/Context;Lcom/mi/fitness/checkupdate/model/LatestVersion;Lcom/xiaomi/fitness/device/manager/export/WearableDeviceModel;)V
+TEMPS 1
+CODE
+    invoke-static {p2}, Lcom/markus/ota/OtaGuard;->offerBlocked(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+# ---- 3. «Версия устройства» and other ways into the upgrade screen: the notice for a blocked offer
+CLASS com/mi/fitness/checkupdate/UpdateHelper
+METHOD goUpgradeFragment(Landroid/content/Context;Ljava/io/Serializable;)V
+TEMPS 1
+CODE
+    const-string v0, "UpdateHelper.goUpgradeFragment"
+    invoke-static {v0, p2}, Lcom/markus/ota/OtaGuard;->entryBlocked(Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeFragment
+METHOD onViewCreated(Landroid/view/View;Landroid/os/Bundle;)V
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->closeStockScreen(Ljava/lang/Object;)V
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeFragment
+METHOD onViewCreated(Landroid/view/View;Landroid/os/Bundle;)V
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->closeStockScreen(Ljava/lang/Object;)V
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiUpgradeFragment
+METHOD onViewCreated(Landroid/view/View;Landroid/os/Bundle;)V
+CODE
+    invoke-static {p0}, Lcom/markus/ota/OtaGuard;->closeStockScreen(Ljava/lang/Object;)V
+
+# ---- 4. Buttons of the upgrade screens: refused with the notice when the last offer is blocked
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD downLoadFirmWareAndUpdate()V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.downLoadFirmWareAndUpdate"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD installFirmWare()V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.installFirmWare"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD toInstall()V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.toInstall"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD updateFirmware(Ljava/io/File;)V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.updateFirmware"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD notifyInstall()V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.notifyInstall"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD startOta(ILjava/lang/String;ILedj;)V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.startOta"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothUpgradeViewModel
+METHOD startGeneralOta(ILjava/lang/String;Ledj;)V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothUpgradeViewModel.startGeneralOta"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD downLoadFirmWareAndUpdate()V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.downLoadFirmWareAndUpdate"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD installFirmWare()V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.installFirmWare"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD toInstall()V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.toInstall"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD updateFirmware(Ljava/io/File;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.updateFirmware"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD startOta(ILjava/lang/String;ILedj;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.startOta"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD startGeneralOta(ILjava/lang/String;Ledj;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.startGeneralOta"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/bluetooth/EcoBluetoothUpgradeViewModel
+METHOD startLocalOta(Ljava/lang/String;ILjava/lang/String;Ledj;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoBluetoothUpgradeViewModel.startLocalOta"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiUpgradeViewModel
+METHOD startDownload()V
+TEMPS 2
+CODE
+    const-string v0, "HuamiUpgradeViewModel.startDownload"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiUpgradeViewModel
+METHOD startDeviceUpgrade()V
+TEMPS 2
+CODE
+    const-string v0, "HuamiUpgradeViewModel.startDeviceUpgrade"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiUpgradeViewModel
+METHOD startUpdate()V
+TEMPS 2
+CODE
+    const-string v0, "HuamiUpgradeViewModel.startUpdate"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiUpgradeViewModel
+METHOD retryUpdate()V
+TEMPS 2
+CODE
+    const-string v0, "HuamiUpgradeViewModel.retryUpdate"
+    const/4 v1, 0x1
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+# ---- 5. Silent upgrade, download/install managers, "force upgrade" notice to the band: quiet refusal
+CLASS com/mi/fitness/checkupdate/ota/SilentUpgradeManager
+METHOD downloadIfNeed()V
+TEMPS 2
+CODE
+    const-string v0, "SilentUpgradeManager.downloadIfNeed"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ota/SilentUpgradeManager
+METHOD upgradeIfNeed()V
+TEMPS 2
+CODE
+    const-string v0, "SilentUpgradeManager.upgradeIfNeed"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ota/SilentUpgradeManager
+METHOD upgradeIfNeed(Ljava/lang/String;)V
+TEMPS 2
+CODE
+    const-string v0, "SilentUpgradeManager.upgradeIfNeed"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothOtaManager
+METHOD startDownload(Lkotlinx/coroutines/CoroutineScope;Lcom/mi/fitness/checkupdate/ota/DownloadListener;)V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothOtaManager.startDownload"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/bluetooth/BluetoothOtaManager
+METHOD startUpgrade(Lkotlin/jvm/functions/Function1;)V
+TEMPS 2
+CODE
+    const-string v0, "BluetoothOtaManager.startUpgrade"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiOtaManager
+METHOD startDownload(Lkotlinx/coroutines/CoroutineScope;Lcom/mi/fitness/checkupdate/ota/DownloadListener;)V
+TEMPS 2
+CODE
+    const-string v0, "HuamiOtaManager.startDownload"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/ui/huami/HuamiOtaManager
+METHOD startUpgrade(Lkotlin/jvm/functions/Function1;)V
+TEMPS 2
+CODE
+    const-string v0, "HuamiOtaManager.startUpgrade"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/util/DeviceSender
+METHOD notifyForceUpgrade(Ljava/lang/String;)V
+TEMPS 2
+CODE
+    const-string v0, "DeviceSender.notifyForceUpgrade"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/util/EcoDeviceSender
+METHOD notifyForceUpgrade(Ljava/lang/String;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoDeviceSender.notifyForceUpgrade"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+CLASS com/mi/fitness/checkupdate/eco/util/EcoDeviceSender
+METHOD notifyEcoForceUpgrade(Ljava/lang/String;Ljava/lang/String;)V
+TEMPS 2
+CODE
+    const-string v0, "EcoDeviceSender.notifyEcoForceUpgrade"
+    const/4 v1, 0x0
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->currentBlocked(Ljava/lang/String;Z)Z
+    move-result v0
+    if-eqz v0, :markus_ota_stock
+    return-void
+    :markus_ota_stock
+
+# ---- 6. The calls that talk to the band: the firmware screen permit (patch 12) or a stock update the policy allowed
+CLASS com/mi/fitness/checkupdate/util/DeviceSender
+METHOD prepareOta(ZILjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+TEMPS 1
+CODE
+    const-string v0, "DeviceSender.prepareOta"
+    invoke-static {v0, p8}, Lcom/markus/ota/OtaGuard;->denyPrepare(Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    return-void
+    :markus_ota_allowed
+
+CLASS com/mi/fitness/checkupdate/util/DeviceSender
+METHOD startOta(IILjava/lang/String;ILedj;)V
+TEMPS 1
+CODE
+    const-string v0, "DeviceSender.startOta"
+    invoke-static {v0, p3, p5}, Lcom/markus/ota/OtaGuard;->denyStart(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    return-void
+    :markus_ota_allowed
+
+CLASS com/mi/fitness/checkupdate/eco/util/EcoDeviceSender
+METHOD prepareOta(Ljava/lang/String;ZILjava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+TEMPS 2
+CODE
+    move-object/from16 v1, p7
+    const-string v0, "EcoDeviceSender.prepareOta"
+    invoke-static {v0, v1}, Lcom/markus/ota/OtaGuard;->denyPrepare(Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    return-void
+    :markus_ota_allowed
+
+CLASS com/mi/fitness/checkupdate/eco/util/EcoDeviceSender
+METHOD prepareOta(ZILjava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+TEMPS 1
+CODE
+    const-string v0, "EcoDeviceSender.prepareOta"
+    invoke-static {v0, p6}, Lcom/markus/ota/OtaGuard;->denyPrepare(Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    return-void
+    :markus_ota_allowed
+
+CLASS com/mi/fitness/checkupdate/eco/util/EcoDeviceSender
+METHOD startOta(IILjava/lang/String;ILcom/xiaomi/fitness/eco/device/manager/export/EcoDeviceModel;Ledj;)V
+TEMPS 1
+CODE
+    const-string v0, "EcoDeviceSender.startOta"
+    invoke-static {v0, p3, p6}, Lcom/markus/ota/OtaGuard;->denyStart(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    return-void
+    :markus_ota_allowed
+
+# The single file-transfer entry of the app and the engine behind it in the ":device" process. Type 2 = firmware.
+CLASS com/xiaomi/fitness/device/contact/DeviceContactImpl
+METHOD sendFile(Ljava/lang/String;IILjava/lang/String;ILcom/xiaomi/fitness/device/contact/export/SyncStateListener;I)I
+TEMPS 1
+CODE
+    invoke-static {p2, p4}, Lcom/markus/ota/OtaGuard;->denyFile(ILjava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    const/4 v0, -0x1
+    return v0
+    :markus_ota_allowed
+
+CLASS com/xiaomi/fitness/device/contact/remote/DeviceContactEngineImpl
+METHOD sendFile(Ljava/lang/String;IILjava/lang/String;IILrhe;)I
+TEMPS 1
+CODE
+    invoke-static {p2, p4}, Lcom/markus/ota/OtaGuard;->denyFile(ILjava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :markus_ota_allowed
+    const/4 v0, -0x1
+    return v0
+    :markus_ota_allowed
+
+# ---- 7. The version the band itself reported (readWatchInfo) right before the stock check asks the server;
+# the cached DeviceInfo version can be empty, the policy then uses this one
+CLASS com/mi/fitness/checkupdate/UpdateHelper
+METHOD requestLatestVersion$lambda$10(Lcom/xiaomi/fitness/device/manager/export/WearableDeviceModel;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lcom/mi/fitness/checkupdate/model/LatestVersion;)Lkotlin/Unit;
+CODE
+    invoke-static {p1}, Lcom/markus/ota/OtaGuard;->noteBandVersion(Ljava/lang/String;)V
+
+CLASS com/mi/fitness/checkupdate/UpdateHelper
+METHOD requestLatestVersion$lambda$7(Lcom/xiaomi/fitness/device/manager/export/WearableDeviceModel;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lcom/mi/fitness/checkupdate/model/X5LatestVersion;)Lkotlin/Unit;
+CODE
+    invoke-static {p1}, Lcom/markus/ota/OtaGuard;->noteBandVersion(Ljava/lang/String;)V

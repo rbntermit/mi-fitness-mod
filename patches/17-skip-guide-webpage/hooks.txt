@@ -1,0 +1,59 @@
+# Patch 17: the web page step of the setup guide can always be left. Turned into smali.patch by
+# scripts/make_hooks.pl. Hooks sit before the first instruction (pN untouched) unless AT says otherwise.
+
+# ---- the web page step: button, 10 s timer, load result
+CLASS com/xiaomi/fitness/devicesettings/guide/GuideWebViewFragment
+METHOD initView()V
+CODE
+    invoke-static {p0}, Lcom/markus/guide/GuideSkip;->attach(Ljava/lang/Object;)V
+
+CLASS com/xiaomi/fitness/devicesettings/guide/GuideWebViewFragment
+METHOD onLoadFinish(Z)V
+CODE
+    invoke-static {p0, p1}, Lcom/markus/guide/GuideSkip;->onLoadFinish(Ljava/lang/Object;Z)V
+
+CLASS com/xiaomi/fitness/devicesettings/guide/GuideWebViewFragment
+METHOD onDestroy()V
+CODE
+    invoke-static {p0}, Lcom/markus/guide/GuideSkip;->detach(Ljava/lang/Object;)V
+
+# ---- the page's WebViewClient (also used by other web screens; GuideSkip ignores any WebView but the guide's)
+CLASS b46
+METHOD onReceivedError(Landroid/webkit/WebView;Landroid/webkit/WebResourceRequest;Landroid/webkit/WebResourceError;)V
+CODE
+    invoke-static {p1, p2}, Lcom/markus/guide/GuideSkip;->onMainFrameError(Landroid/webkit/WebView;Landroid/webkit/WebResourceRequest;)V
+
+CLASS b46
+METHOD onReceivedHttpError(Landroid/webkit/WebView;Landroid/webkit/WebResourceRequest;Landroid/webkit/WebResourceResponse;)V
+CODE
+    invoke-static {p1, p2, p3}, Lcom/markus/guide/GuideSkip;->onHttpError(Landroid/webkit/WebView;Landroid/webkit/WebResourceRequest;Landroid/webkit/WebResourceResponse;)V
+
+# after super.onReceivedSslError, which cancels the request (no proceed anywhere); for the guide page the stock
+# "continue anyway?" dialog is skipped and the guide is finished
+CLASS b46
+METHOD onReceivedSslError(Landroid/webkit/WebView;Landroid/webkit/SslErrorHandler;Landroid/net/http/SslError;)V
+AT after invoke-super \{p0, p1, p2, p3\}, Landroid/webkit/WebViewClient;->onReceivedSslError
+TEMPS 1
+CODE
+    invoke-static {p1}, Lcom/markus/guide/GuideSkip;->onSslError(Landroid/webkit/WebView;)Z
+    move-result v0
+    if-eqz v0, :markus_guide_stock
+    return-void
+    :markus_guide_stock
+
+# ---- the guide finished the stock way (its last button)
+CLASS com/xiaomi/fitness/ubox_guide/ui/fragment/DoneFragment
+METHOD bindView$lambda$1(Lcom/xiaomi/fitness/ubox_guide/ui/fragment/DoneFragment;Landroid/view/View;)V
+CODE
+    invoke-static {p0}, Lcom/markus/guide/GuideSkip;->markDoneFrom(Ljava/lang/Object;)V
+
+# ---- the band reports another phone id on connect: no second guide once it was finished on this phone
+CLASS com/xiaomi/fitness/device/manager/ui/tab/SwitchPhoneIdReceiver
+METHOD onReceive(Landroid/content/Context;Landroid/content/Intent;)V
+TEMPS 1
+CODE
+    invoke-static {p1, p2}, Lcom/markus/guide/GuideSkip;->suppressReopen(Landroid/content/Context;Landroid/content/Intent;)Z
+    move-result v0
+    if-eqz v0, :markus_guide_open
+    return-void
+    :markus_guide_open

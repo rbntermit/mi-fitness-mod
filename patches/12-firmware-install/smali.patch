@@ -1,0 +1,11 @@
+--- a/com/markus/a.smali
++++ b/com/markus/a.smali
+@@ -863,6 +863,8 @@
+     return-void
+ 
+     :cond_0
++
++    invoke-static {p0, p1}, Lcom/markus/fw/FirmwareMenu;->insert(Landroidx/databinding/ObservableArrayList;I)V
+     const/16 v0, 0xb
+ 
+     if-ne p1, v0, :cond_1

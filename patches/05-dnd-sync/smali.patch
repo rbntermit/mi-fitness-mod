@@ -1,0 +1,150 @@
+--- a/com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper.smali
++++ b/com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper.smali
+@@ -2101,3 +2101,84 @@
+     :cond_0
+     return-void
+ .end method
++
++.method public final trySyncManualZenRule()Z
++    .locals 6
++
++    sget-object v0, Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager;->Companion:Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager$Companion;
++
++    invoke-static {v0}, Lcom/xiaomi/fitness/device/manager/export/DeviceManagerExtKt;->getInstance(Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager$Companion;)Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager;
++
++    move-result-object v0
++
++    invoke-interface {v0}, Lcom/xiaomi/fitness/device/manager/DeviceManager;->getCurrentDeviceModel()Lcom/xiaomi/fitness/device/manager/DeviceModel;
++
++    move-result-object v1
++
++    if-eqz v1, :cond_0
++
++    invoke-interface {v1}, Lcom/xiaomi/fitness/device/manager/DeviceModel;->getDid()Ljava/lang/String;
++
++    move-result-object v1
++
++    invoke-virtual {v0, v1}, Lcom/xiaomi/fitness/device/manager/export/WearableDeviceManager;->getDeviceCapabilityV3(Ljava/lang/String;)J
++
++    move-result-wide v2
++
++    const-wide/16 v4, 0x4
++
++    and-long/2addr v2, v4
++
++    const-wide/16 v4, 0x0
++
++    cmp-long v0, v2, v4
++
++    if-eqz v0, :cond_0
++
++    sget-object v0, Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils;->INSTANCE:Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils;
++
++    invoke-static {v0}, Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils;->access$isZenModeOpen(Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils;)Z
++
++    move-result v1
++
++    invoke-static {v1}, Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils;->access$setPreValue$p(Z)V
++
++    new-instance v0, Lnjr;
++
++    invoke-direct {v0}, Lnjr;-><init>()V
++
++    const/4 v2, 0x1
++
++    iput-boolean v2, v0, Lnjr;->a:Z
++
++    const-string v2, "manual_zen_rule"
++
++    iput-object v2, v0, Lnjr;->b:Ljava/lang/String;
++
++    iput v1, v0, Lnjr;->c:I
++
++    invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
++
++    move-result-wide v2
++
++    long-to-int v2, v2
++
++    iput v2, v0, Lnjr;->e:I
++
++    new-instance v1, Ljava/util/ArrayList;
++
++    invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
++
++    invoke-interface {v1, v0}, Ljava/util/List;->add(Ljava/lang/Object;)Z
++
++    invoke-direct {p0, v1}, Lcom/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper;->syncZenRule(Ljava/util/List;)V
++
++    const/4 v0, 0x1
++
++    return v0
++
++    :cond_0
++    const/4 v0, 0x0
++
++    return v0
++.end method
+--- a/com/xiaomi/fitness/devicesettings/utils/ZenUtils.smali
++++ b/com/xiaomi/fitness/devicesettings/utils/ZenUtils.smali
+@@ -235,6 +235,10 @@
+         .end annotation
+     .end param
+ 
++    const/4 v0, 0x1
++
++    return v0
++
+     sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
+ 
+     const/16 v1, 0x23
+--- a/com/xiaomi/fitness/devicesettings/utils/ZenUtils$postSyncZenMode$2.smali
++++ b/com/xiaomi/fitness/devicesettings/utils/ZenUtils$postSyncZenMode$2.smali
+@@ -158,10 +158,23 @@
+ 
+     iget v0, p0, Lcom/xiaomi/fitness/devicesettings/utils/ZenUtils$postSyncZenMode$2;->label:I
+ 
+-    if-nez v0, :cond_1
++    if-nez v0, :cond_2
+ 
+     invoke-static {p1}, Lkotlin/ResultKt;->throwOnFailure(Ljava/lang/Object;)V
+ 
++    sget-object v0, Lcom/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper;->INSTANCE:Lcom/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper;
++
++    invoke-virtual {v0}, Lcom/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper;->trySyncManualZenRule()Z
++
++    move-result v0
++
++    if-eqz v0, :cond_0
++
++    sget-object p1, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
++
++    return-object p1
++
++    :cond_0
+     new-instance v2, Lt3u;
+ 
+     invoke-direct {v2}, Lt3u;-><init>()V
+@@ -232,11 +245,11 @@
+ 
+     move-result v1
+ 
+-    if-eqz v1, :cond_0
++    if-eqz v1, :cond_1
+ 
+     const/4 p1, 0x0
+ 
+-    :cond_0
++    :cond_1
+     iput p1, v0, Lxir;->a:I
+ 
+     sget-object p1, Lcom/xiaomi/fitness/device/contact/export/DeviceContact;->Companion:Lcom/xiaomi/fitness/device/contact/export/DeviceContact$Companion;
+@@ -261,7 +274,7 @@
+ 
+     return-object p1
+ 
+-    :cond_1
++    :cond_2
+     new-instance p1, Ljava/lang/IllegalStateException;
+ 
+     const-string v0, "call to \'resume\' before \'invoke\' with coroutine"

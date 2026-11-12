@@ -1,0 +1,12 @@
+# 07: the health summary card on «Здоровье» stays hidden while com.markus.Settings says so.
+# 3.60.0i also shows the card in the developer channel (AppUtil.isDevChannel); the stock decision ends in v1
+# right before the second setVisible call, so the mod's switch is and-ed into it there. v2 is not read later.
+CLASS com/xiaomi/fitness/homepage/HealthV2Fragment
+METHOD requestHealthSummary(Z)V
+AT before invoke-static \{v0, v1\}, Lcom/xiaomi/fitness/extensions/ViewExtKt;->setVisible
+TEMPS 3
+CODE
+    invoke-static {}, Lcom/markus/Settings;->isHealthSummaryHidden()Z
+    move-result v2
+    xor-int/lit8 v2, v2, 0x1
+    and-int/2addr v1, v2

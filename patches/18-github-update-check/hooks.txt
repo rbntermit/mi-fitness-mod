@@ -1,0 +1,15 @@
+# 18: mod update check. Applied by build.sh after 00-core, so the second hook can sit right after the
+# com.markus.a.insertSubMenus call that 00-core adds.
+
+# the daily automatic check (does nothing unless the switch is on and a day has passed)
+CLASS com/xiaomi/fitness/main/MainActivity
+METHOD onResume()V
+CODE
+    invoke-static {p0}, Lcom/markus/update/ModUpdate;->onMainResume(Landroid/app/Activity;)V
+
+# Устройство -> Ещё -> «Обновление мода»; v1 = the item list, v6 = the sub-menu type (set by 00-core)
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel
+METHOD createSettingItems(I)V
+AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
+CODE
+    invoke-static {v1, v6}, Lcom/markus/update/ModUpdateMenu;->insert(Landroidx/databinding/ObservableArrayList;I)V

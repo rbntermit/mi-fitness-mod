@@ -1,0 +1,30 @@
+# 19: «Не учитывать шаги телефона». With the switch on, the phone's step provider says it is not supported,
+# exactly what the stepOff mod (3.52.0i) hard-wired; with it off (default) the original code runs.
+CLASS com/xiaomi/fitness/steps/PhoneStepsProvider
+METHOD supported()Z
+TEMPS 1
+CODE
+    invoke-static {}, Lcom/markus/steps/PhoneSteps;->ignored()Z
+    move-result v0
+    if-eqz v0, :markus_steps_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_steps_stock
+
+CLASS com/xiaomi/fitness/steps/PhoneStepsProviderImpl
+METHOD supported()Z
+TEMPS 1
+CODE
+    invoke-static {}, Lcom/markus/steps/PhoneSteps;->ignored()Z
+    move-result v0
+    if-eqz v0, :markus_steps_stock
+    const/4 v0, 0x0
+    return v0
+    :markus_steps_stock
+
+# the switch row in the mod's settings sub-menu; v1 = the item list, v6 = the sub-menu type (set by 00-core)
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel
+METHOD createSettingItems(I)V
+AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
+CODE
+    invoke-static {v1, v6}, Lcom/markus/steps/PhoneSteps;->insertSwitch(Landroidx/databinding/ObservableArrayList;I)V

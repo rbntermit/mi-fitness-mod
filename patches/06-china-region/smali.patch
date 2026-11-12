@@ -1,0 +1,288 @@
+--- a/com/xiaomi/fitness/login/SplashActivity$startNextActivity$1.smali
++++ b/com/xiaomi/fitness/login/SplashActivity$startNextActivity$1.smali
+@@ -383,7 +383,7 @@
+ 
+     invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto/16 :goto_2
++    goto/16 :goto_3
+ 
+     :cond_4
+     iget-boolean v2, v3, Lkotlin/jvm/internal/Ref$BooleanRef;->element:Z
+@@ -410,7 +410,7 @@
+ 
+     invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto/16 :goto_2
++    goto/16 :goto_3
+ 
+     :cond_5
+     iget-boolean v1, v1, Lkotlin/jvm/internal/Ref$BooleanRef;->element:Z
+@@ -439,7 +439,7 @@
+ 
+     invoke-static {p1, v3, v0}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    goto/16 :goto_2
++    goto/16 :goto_3
+ 
+     :cond_6
+     iget-boolean v0, v0, Lkotlin/jvm/internal/Ref$BooleanRef;->element:Z
+@@ -462,7 +462,7 @@
+ 
+     invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto/16 :goto_2
++    goto/16 :goto_3
+ 
+     :cond_7
+     sget-object v0, Lcom/xiaomi/fitness/common/utils/AppUtil;->INSTANCE:Lcom/xiaomi/fitness/common/utils/AppUtil;
+@@ -489,15 +489,16 @@
+ 
+     move-result v1
+ 
+-    if-eqz v1, :cond_8
++    goto :goto_1
+ 
+     iget-object p1, p0, Lcom/xiaomi/fitness/login/SplashActivity$startNextActivity$1;->this$0:Lcom/xiaomi/fitness/login/SplashActivity;
+ 
+     invoke-static {p1}, Lcom/xiaomi/fitness/login/export/RegionExtKt;->mainLandNotesSetup(Landroid/content/Context;)V
+ 
+-    goto/16 :goto_2
++    goto/16 :goto_3
+ 
+     :cond_8
++    :goto_1
+     invoke-virtual {v0}, Lcom/xiaomi/fitness/common/utils/AppUtil;->isPlayChannel()Z
+ 
+     move-result v0
+@@ -548,7 +549,7 @@
+ 
+     invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto :goto_2
++    goto :goto_3
+ 
+     :cond_9
+     sget-object v0, Lcom/xiaomi/fitness/login/ad/SplashAdPreference;->INSTANCE:Lcom/xiaomi/fitness/login/ad/SplashAdPreference;
+@@ -571,12 +572,12 @@
+ 
+     check-cast v0, Lcom/fitness/banner/export/v2/SplashAdItem;
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_a
+     move-object v0, v3
+ 
+-    :goto_1
++    :goto_2
+     new-instance v1, Ljava/lang/StringBuilder;
+ 
+     invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
+@@ -615,14 +616,14 @@
+ 
+     invoke-virtual {v1, v2}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto :goto_2
++    goto :goto_3
+ 
+     :cond_b
+     iget-object v0, p0, Lcom/xiaomi/fitness/login/SplashActivity$startNextActivity$1;->this$0:Lcom/xiaomi/fitness/login/SplashActivity;
+ 
+     invoke-static {v0, v3, p1}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    goto :goto_2
++    goto :goto_3
+ 
+     :cond_c
+     invoke-static {}, Lcom/xiaomi/fitness/main/export/MainExtKt;->getBindNew()Z
+@@ -654,7 +655,7 @@
+ 
+     invoke-static {v0, v3, p1}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    :goto_2
++    :goto_3
+     sget-object p1, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
+ 
+     return-object p1
+--- a/com/xiaomi/fitness/login/internaltest/InternalTestActivity.smali
++++ b/com/xiaomi/fitness/login/internaltest/InternalTestActivity.smali
+@@ -557,7 +557,7 @@
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_4
++    goto :goto_1
+ 
+     invoke-static {}, Lcom/xiaomi/fitness/login/utils/RegionUtil;->isInnerCN()Z
+ 
+@@ -582,6 +582,7 @@
+     return-void
+ 
+     :cond_4
++    :goto_1
+     const/4 v0, 0x6
+ 
+     const/4 v1, 0x0
+--- a/com/xiaomi/fitness/login/privacy/PrivacyActivity.smali
++++ b/com/xiaomi/fitness/login/privacy/PrivacyActivity.smali
+@@ -621,7 +621,7 @@
+ 
+     if-nez v1, :cond_0
+ 
+-    goto :goto_0
++    goto :goto_1
+ 
+     :cond_0
+     sget-object v1, Lcom/xiaomi/fitness/common/utils/AppUtil;->INSTANCE:Lcom/xiaomi/fitness/common/utils/AppUtil;
+@@ -630,7 +630,7 @@
+ 
+     move-result v2
+ 
+-    if-eqz v2, :cond_1
++    goto :goto_0
+ 
+     invoke-static {}, Lcom/xiaomi/fitness/login/utils/RegionUtil;->isInnerCN()Z
+ 
+@@ -652,9 +652,10 @@
+ 
+     invoke-static {p0}, Lcom/xiaomi/fitness/login/export/RegionExtKt;->mainLandNotesSetup(Landroid/content/Context;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_1
++    :goto_0
+     invoke-virtual {v1}, Lcom/xiaomi/fitness/common/utils/AppUtil;->isPlayChannel()Z
+ 
+     move-result v1
+@@ -697,7 +698,7 @@
+ 
+     invoke-virtual {p0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_2
+     invoke-virtual {p0}, Landroid/app/Activity;->getApplication()Landroid/app/Application;
+@@ -712,10 +713,10 @@
+ 
+     invoke-static {v1, v2, v0}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_3
+-    :goto_0
++    :goto_1
+     new-instance v1, Landroid/content/Intent;
+ 
+     const-class v2, Lcom/xiaomi/fitness/login/region/RegionSelectActivity;
+@@ -726,7 +727,7 @@
+ 
+     invoke-virtual {p0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    :goto_1
++    :goto_2
+     sget-object v0, Lcom/xiaomi/fitness/res/preload/export/ResPreloadManager;->Companion:Lcom/xiaomi/fitness/res/preload/export/ResPreloadManager$Companion;
+ 
+     invoke-static {v0}, Lcom/xiaomi/fitness/res/preload/export/PreloadManagerExtKt;->getInstance(Lcom/xiaomi/fitness/res/preload/export/ResPreloadManager$Companion;)Lcom/xiaomi/fitness/res/preload/export/ResPreloadManager;
+--- a/com/xiaomi/fitness/login/region/RegionSelectListActivity.smali
++++ b/com/xiaomi/fitness/login/region/RegionSelectListActivity.smali
+@@ -411,31 +411,6 @@
+ .method private final shouldShowMainLandSwitchDialog(Lcom/xiaomi/fitness/account/api/bean/CountryInfo;)Z
+     .locals 2
+ 
+-    sget-object v0, Lcom/xiaomi/fitness/common/utils/AppUtil;->INSTANCE:Lcom/xiaomi/fitness/common/utils/AppUtil;
+-
+-    invoke-virtual {v0}, Lcom/xiaomi/fitness/common/utils/AppUtil;->isPlayChannel()Z
+-
+-    move-result v0
+-
+-    if-eqz v0, :cond_0
+-
+-    const-string v0, "cn"
+-
+-    invoke-virtual {p1}, Lcom/xiaomi/fitness/account/api/bean/CountryInfo;->getName()Ljava/lang/String;
+-
+-    move-result-object p1
+-
+-    const/4 v1, 0x1
+-
+-    invoke-static {v0, p1, v1}, Lkotlin/text/StringsKt;->equals(Ljava/lang/String;Ljava/lang/String;Z)Z
+-
+-    move-result p1
+-
+-    if-eqz p1, :cond_0
+-
+-    return v1
+-
+-    :cond_0
+     const/4 p1, 0x0
+ 
+     return p1
+--- a/com/xiaomi/fitness/login/welcome/WelcomeActivity.smali
++++ b/com/xiaomi/fitness/login/welcome/WelcomeActivity.smali
+@@ -131,7 +131,7 @@
+ 
+     invoke-virtual {p0, p1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto/16 :goto_1
++    goto/16 :goto_2
+ 
+     :cond_1
+     const/4 p1, 0x0
+@@ -156,7 +156,7 @@
+ 
+     invoke-static {p0, p1, v0}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_2
+     if-eqz v0, :cond_3
+@@ -171,7 +171,7 @@
+ 
+     invoke-virtual {p0, p1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_3
+     sget-object v0, Lcom/xiaomi/fitness/common/utils/AppUtil;->INSTANCE:Lcom/xiaomi/fitness/common/utils/AppUtil;
+@@ -180,7 +180,7 @@
+ 
+     move-result v1
+ 
+-    if-eqz v1, :cond_4
++    goto :goto_1
+ 
+     invoke-static {}, Lcom/xiaomi/fitness/login/utils/RegionUtil;->isInnerCN()Z
+ 
+@@ -202,9 +202,10 @@
+ 
+     invoke-static {p0}, Lcom/xiaomi/fitness/login/export/RegionExtKt;->mainLandNotesSetup(Landroid/content/Context;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_4
++    :goto_1
+     invoke-virtual {v0}, Lcom/xiaomi/fitness/common/utils/AppUtil;->isPlayChannel()Z
+ 
+     move-result v0
+@@ -249,12 +250,12 @@
+ 
+     invoke-virtual {p0, p1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+ 
+-    goto :goto_1
++    goto :goto_2
+ 
+     :cond_5
+     invoke-static {p0, p1, v2}, Lcom/xiaomi/fitness/main/export/MainExtKt;->showMainActivity(Landroid/content/Context;Ljava/lang/String;Landroid/os/Bundle;)V
+ 
+-    :goto_1
++    :goto_2
+     invoke-virtual {p0}, Lmiuix/appcompat/app/AppCompatActivity;->finish()V
+ 
+     return-void

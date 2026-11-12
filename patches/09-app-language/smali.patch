@@ -1,0 +1,47 @@
+--- a/com/xiaomi/fitness/devicesettings/DeviceSettingsSyncer.smali
++++ b/com/xiaomi/fitness/devicesettings/DeviceSettingsSyncer.smali
+@@ -4134,6 +4134,17 @@
+ 
+     move-result-object v8
+ 
++    invoke-static {}, Lcom/markus/Settings;->isOverrideLocale()Z
++
++    move-result v4
++
++    if-eqz v4, :cond_1
++
++    invoke-static {}, Lcom/markus/Settings;->getOverrideLocale()Ljava/lang/String;
++
++    move-result-object v8
++
++    :cond_1
+     new-instance v4, Ljava/lang/StringBuilder;
+ 
+     invoke-direct {v4}, Ljava/lang/StringBuilder;-><init>()V
+@@ -4168,7 +4179,7 @@
+ 
+     move-result v4
+ 
+-    if-eqz v4, :cond_1
++    if-eqz v4, :cond_2
+ 
+     const-string v6, "_"
+ 
+@@ -4192,7 +4203,7 @@
+ 
+     move-result v10
+ 
+-    if-ne v10, v0, :cond_1
++    if-ne v10, v0, :cond_2
+ 
+     invoke-interface {v9, v7}, Ljava/util/List;->get(I)Ljava/lang/Object;
+ 
+@@ -4224,7 +4235,7 @@
+ 
+     move-result-object v8
+ 
+-    :cond_1
++    :cond_2
+     new-instance v0, Ljava/lang/StringBuilder;
+ 
+     invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V

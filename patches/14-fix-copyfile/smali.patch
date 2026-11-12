@@ -1,0 +1,42 @@
+--- a/com/markus/FilePickerProxyActivity.smali
++++ b/com/markus/FilePickerProxyActivity.smali
+@@ -1088,7 +1088,7 @@
+     new-array v0, v0, [B
+ 
+     .line 153
+-    invoke-virtual {p1, v0}, Ljava/io/InputStream;->read([B)I
++    invoke-static {p1, v0}, Lcom/markus/IoCompat;->readUpTo(Ljava/io/InputStream;[B)I
+ 
+     .line 155
+     new-instance p1, Ljava/lang/StringBuilder;
+@@ -2205,20 +2205,7 @@
+     new-array v3, v3, [B
+ 
+     .line 103
+-    :goto_0
+-    invoke-virtual {p1, v3}, Ljava/io/InputStream;->read([B)I
+-
+-    move-result v5
+-
+-    if-lez v5, :cond_1
+-
+-    .line 104
+-    invoke-virtual {p2, v3}, Ljava/io/OutputStream;->write([B)V
+-
+-    goto :goto_0
+-
+-    .line 107
+-    :cond_1
++    invoke-static {p1, p2}, Lcom/markus/IoCompat;->copy(Ljava/io/InputStream;Ljava/io/OutputStream;)J
+     invoke-virtual {p2}, Ljava/io/OutputStream;->close()V
+ 
+     .line 108
+@@ -2351,7 +2338,7 @@
+ 
+     .line 483
+     :try_start_1
+-    invoke-virtual {v2, v0}, Ljava/io/InputStream;->read([B)I
++    invoke-static {v2, v0}, Lcom/markus/IoCompat;->readUpTo(Ljava/io/InputStream;[B)I
+     :try_end_1
+     .catchall {:try_start_1 .. :try_end_1} :catchall_0
+ 

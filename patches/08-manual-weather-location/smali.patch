@@ -1,0 +1,47 @@
+--- a/com/xiaomi/fitness/sync/WeatherLocationService$onStartCommand$1.smali
++++ b/com/xiaomi/fitness/sync/WeatherLocationService$onStartCommand$1.smali
+@@ -171,13 +171,34 @@
+ .method public locationSuccess(DDD)V
+     .locals 11
+ 
++    invoke-static {}, Lcom/markus/Settings;->isManualWeatherLocation()Z
++
++    move-result v0
++
++    if-eqz v0, :cond_0
++
++    invoke-static {}, Lcom/markus/Settings;->getManualWeatherLocationLat()D
++
++    move-result-wide p1
++
++    invoke-static {}, Lcom/markus/Settings;->getManualWeatherLocationLon()D
++
++    move-result-wide p3
++
++    const-string v0, "Wearable.weather"
++
++    const-string v1, "Manual weather coordinates applied"
++
++    invoke-static {v0, v1}, Lcom/xiaomi/fitness/common/log/Logger;->i(Ljava/lang/String;Ljava/lang/String;)V
++
++    :cond_0
+     iget-object v0, p0, Lcom/xiaomi/fitness/sync/WeatherLocationService$onStartCommand$1;->this$0:Lcom/xiaomi/fitness/sync/WeatherLocationService;
+ 
+     invoke-static {v0}, Lcom/xiaomi/fitness/sync/WeatherLocationService;->access$getMCommandNum$p(Lcom/xiaomi/fitness/sync/WeatherLocationService;)I
+ 
+     move-result v0
+ 
+-    if-lez v0, :cond_0
++    if-lez v0, :cond_1
+ 
+     iget-object v0, p0, Lcom/xiaomi/fitness/sync/WeatherLocationService$onStartCommand$1;->this$0:Lcom/xiaomi/fitness/sync/WeatherLocationService;
+ 
+@@ -191,7 +212,7 @@
+ 
+     invoke-static {v1, v0}, Lcom/xiaomi/fitness/sync/WeatherLocationService;->access$setMCommandNum$p(Lcom/xiaomi/fitness/sync/WeatherLocationService;I)V
+ 
+-    :cond_0
++    :cond_1
+     sget-object v2, Lcom/xiaomi/fitness/common/log/LocationLog;->INSTANCE:Lcom/xiaomi/fitness/common/log/LocationLog;
+ 
+     iget-object v0, p0, Lcom/xiaomi/fitness/sync/WeatherLocationService$onStartCommand$1;->this$0:Lcom/xiaomi/fitness/sync/WeatherLocationService;

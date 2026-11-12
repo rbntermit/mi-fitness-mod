@@ -1,0 +1,193 @@
+# 20-declutter: what the bugreporter mod (3.52.0i) hides, ported to 3.60.0i by meaning, not by diff.
+# Every block is one item; comment out the whole block (and the matching block in hooks.txt) to keep it.
+# Resource rules work on res/ of the app; bundle: rules on the built-in React Native bundles (assets/
+# builtin_bundles_skytree), which build.sh unpacks, repacks and marks as built-in only (see hooks.txt).
+
+# ---- «Здоровье»: the badge with sweets / calorie ratio in the header (shareBtnView)
+RULE health-sweets-badge
+FILE res/layout/health_main_header_data_view2_v2.xml
+FIND (<[\w.]+ android:id="@id/shareBtnView")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+# ---- «Сон»: the "sleeping animal" card
+RULE sleep-animal
+FILE res/layout/fragment_sleep_day_item.xml
+FIND (<include android:id="@id/cardScoreAnimal")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+# ---- «Сон»: the «Улучшите качество сна» banner (sleep improvement plan entries)
+RULE sleep-plan-banner-create
+FILE res/layout/layout_sleep_interfere_create_entry.xml
+FIND (android:tag="layout/layout_sleep_interfere_create_entry_0")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+RULE sleep-plan-banner-day
+FILE res/layout/layout_sleep_interfere_day_entry.xml
+FIND (android:tag="layout/layout_sleep_interfere_day_entry_0")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+# in 3.60.0i the «Сон» page is React Native (bundle health): the same two cards there
+RULE sleep-animal-rn
+FILE bundle:health/index.android.bundle
+FIND e\.SleepAnimalCard=\(0,(\w+)\.memo\)\(function\(\)\{
+REPLACE e.SleepAnimalCard=(0,$1.memo)(function(){return null;
+COUNT 1
+
+RULE sleep-plan-banner-rn
+FILE bundle:health/index.android.bundle
+FIND e\.SleepImprovePlanCard=\(0,(\w+)\.memo\)\(function\(\)\{
+REPLACE e.SleepImprovePlanCard=(0,$1.memo)(function(){return null;
+COUNT 1
+
+# ---- «Профиль»: the «Соревнование» banner (native screen and React Native screen)
+RULE profile-competition-native
+FILE res/layout/mine_fragment_v4.xml
+FIND (android:id="@id/(?:active_pk_view|play_active_pk_view|mine_function_play_view)")
+REPLACE $1 android:visibility="gone"
+COUNT 3
+
+RULE profile-competition-rn
+FILE bundle:mine/index.android.bundle
+FIND e\.VitalityCompetitionCard=\(0,(\w+)\.withRenderFC\)\(function\(\)\{
+REPLACE e.VitalityCompetitionCard=(0,$1.withRenderFC)(function(){return null;
+COUNT 1
+
+# the same card in the variant for regions outside China (it only shows the competition list)
+RULE profile-competition-rn-foreign
+FILE bundle:mine/index.android.bundle
+FIND e\.ForeignFeatureCards=\(0,(\w+)\.withRenderFC\)\(function\(\)\{
+REPLACE e.ForeignFeatureCards=(0,$1.withRenderFC)(function(){return null;
+COUNT 1
+
+# ---- «Профиль»: the «Отчёт» row (mine.bugreport); the native list is handled in hooks.txt
+RULE profile-report-rn
+FILE bundle:mine/index.android.bundle
+FIND (?<=,)(\w+\.default\.createElement\(\w+\.SettingItem,\{name:\w+\.default\.trans\("mine\.bugreport"\))
+REPLACE !1&&$1
+COUNT 4
+
+# ---- periodic advertising banners: «Профиль» ad banner, ad banners and pop-up on «Тренировка»
+RULE ads-profile-banner
+FILE bundle:mine/index.android.bundle
+FIND e\.AdBanner=\(0,(\w+)\.withRenderFC\)\(function\(\)\{
+REPLACE e.AdBanner=(0,$1.withRenderFC)(function(){return null;
+COUNT 1
+
+RULE ads-training-banners
+FILE bundle:sport/index.android.bundle
+FIND (\w+)\.filter\(function\(t\)\{return t\.type===(\w+)\.EN_COMPONENT_TYPE\.BANNER\}\)
+REPLACE $1.filter(function(t){return!1&&t.type===$2.EN_COMPONENT_TYPE.BANNER})
+COUNT 1
+
+RULE ads-training-popup
+FILE bundle:sport/index.android.bundle
+FIND (SportHomePopupModal: visible: "\+\w+\+", info: "\+JSON\.stringify\(\w+\)\),)(\w+&&\w+\?)
+REPLACE $1!1&&$2
+COUNT 1
+
+# ---- «Тренировка»: the «Интерактивные сенсорные курсы» banner (React Native and native parts; hooks.txt too)
+RULE training-sensor-course-card
+FILE bundle:sport/index.android.bundle
+FIND e\.SensorCourse=function\(\)\{
+REPLACE e.SensorCourse=function(){return null;
+COUNT 1
+
+RULE training-sensor-course-type
+FILE bundle:sport/index.android.bundle
+FIND (\w)\.SENSORCOURSE="sensorCourse"
+REPLACE $1.SENSORCOURSE="__hiddenSensorCourse"
+COUNT 1
+
+RULE training-sensor-course-components
+FILE bundle:sport/index.android.bundle
+FIND e\.renderComponents=function\(t\)\{return Array\.isArray\(t\)\?t\.filter\(function\(t\)\{return (\w+)\[t\.type\]\}\)
+REPLACE e.renderComponents=function(t){return Array.isArray(t)?t.filter(function(t){try{var s=JSON.stringify(t).toLowerCase();if(s.indexOf("interactive sensory")>-1||s.indexOf("sport.course.interactive")>-1||s.indexOf("motion_sensing")>-1||s.indexOf("somatosensory")>-1||s.indexOf("aidong")>-1||s.indexOf("sensorcourse")>-1)return!1}catch(e){}return $1[t.type]})
+COUNT 1
+
+RULE training-sensor-course-native-banner
+FILE res/layout/sport_view_sport_activity_motion_sensing_game.xml
+FIND (android:tag="layout/sport_view_sport_activity_motion_sensing_game_0")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+RULE training-sensor-course-native-list
+FILE res/layout/sport_tab_layout_aidong_course.xml
+FIND (android:tag="layout/sport_tab_layout_aidong_course_0")
+REPLACE $1 android:visibility="gone"
+COUNT 1
+
+# ---- «Тренировка»: quick-start icons centred with an even gap, labels wrap to two lines
+RULE training-quickstart-gap
+FILE bundle:sport/index.android.bundle
+FIND (\w+)=\(0,(\w+)\.useMemo\)\(function\(\)\{return (\w+)\.length>4\?19:\((\w+)-52\*\3\.length-24-14\)/\(\3\.length-1\)\}
+REPLACE $1=(0,$2.useMemo)(function(){return $3.length>1?20:0}
+COUNT 1
+
+RULE training-quickstart-center
+FILE bundle:sport/index.android.bundle
+FIND contentContainerStyle:\[(\w+)\.default\.categoryListContainer,\{paddingLeft:14\}\]
+REPLACE contentContainerStyle:[$1.default.categoryListContainer,{flexGrow:1,justifyContent:"center",paddingHorizontal:14}]
+COUNT 1
+
+RULE training-quickstart-labels
+FILE bundle:sport/index.android.bundle
+FIND style:\{maxWidth:56\}\},(\w+)\.default\.createElement\((\w+)\.default,\{style:(\w+)\.sportIcon,source:(\w+)\.icon\}\),(\w+)\.default\.createElement\((\w+)\.Text,\{color:(\w+),fontSize:"13px",mt:"8px",numberOfLines:1,
+REPLACE style:{width:56}},$1.default.createElement($2.default,{style:$3.sportIcon,source:$4.icon}),$5.default.createElement($6.Text,{color:$7,fontSize:"13px",mt:"8px",numberOfLines:2,textAlign:"center",lineHeight:"16px",
+COUNT 1
+
+# ---- translation: «Требуются разрешения» is the label of the app-permissions screen
+RULE l10n-profile-permissions-rn
+FILE bundle:mine/res/localizedString/ru.json
+FIND "mine\.system\.permission":\s*"Требуются разрешения"
+REPLACE "mine.system.permission":"Разрешения приложения"
+COUNT 1
+
+RULE l10n-profile-permissions
+FILE res/values-ru/strings.xml
+FIND (<string name="(?:mine|privacy)_system_permission">)Требуются разрешения(</string>)
+REPLACE $1Разрешения приложения$2
+COUNT any
+
+# ---- translation: the period switch in statistics (D/W/M/Y) was «D / З / П / Г» (a Latin D, then letters of
+# other words); one letter each, as in the original layout
+RULE l10n-period-day
+FILE res/values-ru/strings.xml
+FIND (<string name="health_data_title_day">)D(</string>)
+REPLACE $1Д$2
+COUNT any
+
+RULE l10n-period-week
+FILE res/values-ru/strings.xml
+FIND (<string name="health_data_title_week">)З(</string>)
+REPLACE $1Н$2
+COUNT any
+
+RULE l10n-period-month
+FILE res/values-ru/strings.xml
+FIND (<string name="health_data_title_month">)П(</string>)
+REPLACE $1М$2
+COUNT any
+
+# ---- translation on «Устройство»: two different entries were both called «Приложения»
+RULE l10n-device-apps
+FILE res/values-ru/strings.xml
+FIND (<string name="(?:device_app_market|device_application_setting|device_application_settings)">)Приложения(</string>)
+REPLACE $1Предустановленные приложения$2
+COUNT any
+
+# the title of «Устройство» does not fit the screen («Носимые устройсте…»)
+RULE l10n-device-title
+FILE res/values-ru/strings.xml
+FIND (<string name="device_wearable">)Носимые устройства(</string>)
+REPLACE $1Устройства$2
+COUNT any
+
+RULE l10n-device-third-party-apps
+FILE res/values-ru/strings.xml
+FIND (<string name="xms_third_app_shop">)Приложения(</string>)
+REPLACE $1Пользовательские приложения$2
+COUNT any

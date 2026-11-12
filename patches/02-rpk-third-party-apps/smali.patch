@@ -1,0 +1,43 @@
+--- a/com/xiaomi/fitness/device/manager/DeviceModelExtKt.smali
++++ b/com/xiaomi/fitness/device/manager/DeviceModelExtKt.smali
+@@ -2805,6 +2805,17 @@
+ 
+     invoke-static {p1, v0}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullParameter(Ljava/lang/Object;Ljava/lang/String;)V
+ 
++    invoke-static {p0, p1}, Lcom/markus/a;->overrideFeature(Lcom/xiaomi/fitness/device/manager/DeviceModel;Ljava/lang/String;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_0
++
++    const/4 v0, 0x1
++
++    return v0
++
++    :cond_0
+     invoke-interface {p0}, Lcom/xiaomi/fitness/device/manager/DeviceModel;->getProduct()Lcom/xiaomi/fitness/device/manager/bean/Product;
+ 
+     move-result-object p0
+@@ -2815,7 +2826,7 @@
+ 
+     const/4 v0, 0x0
+ 
+-    if-eqz p0, :cond_0
++    if-eqz p0, :cond_1
+ 
+     invoke-interface {p0, p1}, Ljava/util/List;->contains(Ljava/lang/Object;)Z
+ 
+@@ -2823,11 +2834,11 @@
+ 
+     const/4 p1, 0x1
+ 
+-    if-ne p0, p1, :cond_0
++    if-ne p0, p1, :cond_1
+ 
+     return p1
+ 
+-    :cond_0
++    :cond_1
+     return v0
+ .end method
+ 

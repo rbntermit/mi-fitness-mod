@@ -1,0 +1,27 @@
+# signing key and its passwords: never commit
+keys/
+*.jks
+*.keystore
+keystore.properties
+local.properties
+
+# original packages, builds, firmware, samples
+target/
+target-*/
+out/
+*.apk
+*.apks
+*.apkm
+*.xapk
+*.idsig
+*.bin
+samples/
+
+# working files, logs, third-party tools
+work/
+logs/
+*.log
+tools/
+archive/
+reference/
+donor/

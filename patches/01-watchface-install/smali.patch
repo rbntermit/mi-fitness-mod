@@ -1,0 +1,75 @@
+--- a/okhttp3/internal/connection/RealCall.smali
++++ b/okhttp3/internal/connection/RealCall.smali
+@@ -888,12 +888,53 @@
+ .end method
+ 
+ .method public enqueue(Lokhttp3/Callback;)V
+-    .locals 3
++    .locals 6
+     .param p1    # Lokhttp3/Callback;
+         .annotation build Lorg/jetbrains/annotations/NotNull;
+         .end annotation
+     .end param
+ 
++    invoke-virtual {p0}, Lokhttp3/internal/connection/RealCall;->request()Lokhttp3/Request;
++
++    move-result-object v0
++
++    invoke-virtual {v0}, Lokhttp3/Request;->url()Lokhttp3/HttpUrl;
++
++    move-result-object v1
++
++    invoke-virtual {v1}, Lokhttp3/HttpUrl;->host()Ljava/lang/String;
++
++    move-result-object v2
++
++    const-string v3, "device.local"
++
++    invoke-virtual {v3, v2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
++
++    move-result v4
++
++    if-eqz v4, :cond_0
++
++    invoke-static {p0, p1}, Lcom/markus/a;->handleDeviceLocal(Lokhttp3/internal/connection/RealCall;Lokhttp3/Callback;)V
++
++    iget-object v0, p0, Lokhttp3/internal/connection/RealCall;->executed:Ljava/util/concurrent/atomic/AtomicBoolean;
++
++    const/4 v1, 0x0
++
++    const/4 v2, 0x1
++
++    invoke-virtual {v0, v1, v2}, Ljava/util/concurrent/atomic/AtomicBoolean;->compareAndSet(ZZ)Z
++
++    return-void
++
++    :cond_0
++    new-instance v5, Lcom/markus/OkCallback;
++
++    invoke-direct {v5}, Lcom/markus/OkCallback;-><init>()V
++
++    iput-object p1, v5, Lcom/markus/OkCallback;->target:Lokhttp3/Callback;
++
++    move-object p1, v5
++
+     const-string v0, "responseCallback"
+ 
+     invoke-static {p1, v0}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullParameter(Ljava/lang/Object;Ljava/lang/String;)V
+@@ -908,7 +949,7 @@
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_0
++    if-eqz v0, :cond_1
+ 
+     invoke-direct {p0}, Lokhttp3/internal/connection/RealCall;->callStart()V
+ 
+@@ -926,7 +967,7 @@
+ 
+     return-void
+ 
+-    :cond_0
++    :cond_1
+     new-instance p1, Ljava/lang/IllegalStateException;
+ 
+     const-string v0, "Already Executed"

@@ -1,0 +1,25 @@
+--- a/com/markus/Rc4Codec.smali
++++ b/com/markus/Rc4Codec.smali
+@@ -98,22 +98,10 @@
+     const/4 v0, 0x1
+ 
+     .line 26
+-    new-array v1, v0, [Ljava/lang/Object;
+-
+     const/4 v2, 0x0
+ 
+-    aput-object p0, v1, v2
+-
+-    const-string v3, "ssecurity: %s"
+-
+-    invoke-static {v3, v1}, Ljava/lang/String;->format(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+-
+-    move-result-object v1
+-
+     const-string v3, "Rc4Decode"
+ 
+-    invoke-static {v3, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+-
+     .line 27
+     new-array v1, v0, [Ljava/lang/Object;
+ 

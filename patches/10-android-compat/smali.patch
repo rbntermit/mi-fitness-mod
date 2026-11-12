@@ -1,0 +1,20 @@
+--- a/com/markus/FilePickerProxyActivity.smali
++++ b/com/markus/FilePickerProxyActivity.smali
+@@ -656,7 +656,7 @@
+     .line 208
+     iget-object v0, v5, Lcom/markus/wf/DecoderApi$Result;->preview:Ljava/util/List;
+ 
+-    invoke-interface {v0}, Ljava/util/List;->getFirst()Ljava/lang/Object;
++    invoke-static {v0}, Lcom/markus/Compat;->first(Ljava/util/List;)Ljava/lang/Object;
+ 
+     move-result-object v0
+ 
+@@ -1211,7 +1211,7 @@
+     if-ne v7, v4, :cond_3
+ 
+     .line 386
+-    invoke-interface {v6}, Ljava/util/List;->getFirst()Ljava/lang/Object;
++    invoke-static {v6}, Lcom/markus/Compat;->first(Ljava/util/List;)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 

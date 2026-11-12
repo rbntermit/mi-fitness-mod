@@ -1,0 +1,85 @@
+# 20-declutter: code side of the items in rules.txt. Each block is one item; comment it out together with
+# its rules.txt blocks. Hooks sit before the first instruction unless AT says otherwise.
+
+# ---- «Сон»: the "sleeping animal" card stays as rules.txt left it (hidden)
+CLASS com/xiaomi/fitness/health/sleep/ui/holder/SleepDayAnimalEntranceHolder
+METHOD updateLatestSleepAnimalReport(Lcom/xiaomi/fit/fitness/export/data/stat/SleepAnimalReport;)V
+CODE
+    return-void
+
+# ---- «Сон»: the «Улучшите качество сна» banner stays hidden
+CLASS com/xiaomi/fitness/health/sleep/ui/holder/SleepInterfereBizHolder
+METHOD updateSleepInterferePlan(Lcom/xiaomi/fitness/health/sleep/interfere/net/SleepInterferePlan;)V
+CODE
+    return-void
+
+# ---- «Профиль» (native list): the «Отчёт» row (item type 9, mine_bugreport) is dropped before the list is shown
+CLASS com/xiaomi/fitness/mine/v4/MineV4ViewModel
+METHOD freshItemList()V
+AT before iget-object v0, p0, Lcom/xiaomi/fitness/mine/v4/MineV4ViewModel;->remoteItemList:Landroidx/lifecycle/MutableLiveData;
+CODE
+    iget-object v0, p0, Lcom/xiaomi/fitness/mine/v4/MineV4ViewModel;->itemList:Ljava/util/List;
+    invoke-static {v0}, Lcom/markus/declutter/Declutter;->dropMineReport(Ljava/util/List;)V
+
+# ---- «Устройство»: the advertising banner (e.g. «REDMI Watch 6»). Banners are not requested at all, so the list
+# stays empty and the banner row (tab item type 3) is never added; this is the only caller of getBannerListAsyncV2
+# on the device tab (with and without a bound device)
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceTabV4ViewModel
+METHOD fillBannerList(Ljava/util/List;Lcom/fitness/banner/export/BannerRequestParamV2;Z)V
+CODE
+    return-void
+
+# ---- «Тренировка»: «Интерактивные сенсорные курсы» — the native checks say "not available"
+CLASS com/xiaomi/fitness/main/config/JsonContent
+METHOD getShow_motion_sensing_game_v2()Z
+TEMPS 1
+CODE
+    const/4 v0, 0x0
+    return v0
+
+CLASS com/xiaomi/fitness/sport/utils/MotionSensingCourseHelperExtKt
+METHOD getSupportsMotionSensingCourse()Z
+TEMPS 1
+CODE
+    const/4 v0, 0x0
+    return v0
+
+CLASS com/xiaomi/fitness/sport_xms/SportXmsApiImpl
+METHOD isSupportSomatosensoryGame()Z
+TEMPS 1
+CODE
+    const/4 v0, 0x0
+    return v0
+
+# ---- the React Native bundles changed by rules.txt are always loaded from the APK: a cached or newer
+# server copy of the same module would bring the hidden items back. Only modules listed by build.sh
+# (string markus_builtin_bundles) are affected. 3.60.0i names: h0v = bundle cache, l0v = bundle request helper.
+CLASS h0v
+METHOD g(Ljava/lang/String;Ljava/lang/String;Z)Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;
+TEMPS 1
+CODE
+    invoke-static {p2}, Lcom/markus/declutter/Declutter;->builtinOnly(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :markus_bundle_stock
+    const/4 v0, 0x0
+    return-object v0
+    :markus_bundle_stock
+
+CLASS l0v
+METHOD i(Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;Ljava/lang/String;Lope;)V
+TEMPS 2
+CODE
+    if-eqz p1, :markus_bundle_stock
+    invoke-virtual/range {p1 .. p1}, Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;->getModule()Ljava/lang/String;
+    move-result-object v0
+    invoke-static {v0}, Lcom/markus/declutter/Declutter;->builtinOnly(Ljava/lang/String;)Z
+    move-result v1
+    if-eqz v1, :markus_bundle_stock
+    invoke-virtual {p0, v0}, Ll0v;->e(Ljava/lang/String;)Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;
+    move-result-object v0
+    if-eqz v0, :markus_bundle_stock
+    invoke-virtual {v0}, Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;->clone()Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;
+    move-result-object v0
+    invoke-virtual {p0, v0, p3, p2, p4}, Ll0v;->g(Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;Ljava/lang/String;Lcom/xiaomi/yrn/env/entity/YRNBundleInfo;Lope;)V
+    return-void
+    :markus_bundle_stock
