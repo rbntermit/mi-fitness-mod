@@ -7,8 +7,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$ROOT/repo"
 mkdir -p "$REPO"
-# start from a clean copy of the sources, keep the hand-written README.md and .gitignore of repo/
-find "$REPO" -mindepth 1 -maxdepth 1 ! -name README.md ! -name .gitignore ! -name .git -exec rm -rf {} +
+# start from a clean copy of the sources, keep the hand-written README.md, .gitignore, .gitattributes and .git of repo/
+find "$REPO" -mindepth 1 -maxdepth 1 ! -name README.md ! -name .gitignore ! -name .gitattributes ! -name .git -exec rm -rf {} +
 cp -r "$ROOT/patches" "$REPO/patches"
 cp "$ROOT/build.sh" "$REPO/build.sh"
 mkdir -p "$REPO/scripts" "$REPO/release"
