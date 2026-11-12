@@ -20,6 +20,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
@@ -39,6 +40,8 @@ import java.util.concurrent.Executors;
  */
 public class FirmwareActivity extends Activity {
     private static final int REQUEST_PICK = 1;
+    private static final String PREFS = "markus_firmware";
+    private static final String KEY_CROSSGRADE = "allow_crossgrade_to_global";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -108,6 +111,7 @@ public class FirmwareActivity extends Activity {
         row.addView(button("Скопировать", v -> copyDiagnostics()));
         content.addView(row);
         content.addView(button("Добавить прошивку", v -> pick()));
+        content.addView(crossgradeSwitch());
         final List<FwLibrary.Record> records = library.list();
         if (records.isEmpty()) {
             note("Список пуст.");
@@ -131,7 +135,7 @@ public class FirmwareActivity extends Activity {
                 io.execute(() -> {
                     FwPackage.Info info = cachedInfo(r);
                     FwPolicy.Verdict v = FwPolicy.evaluate(FwName.parse(r.originalName), info, s, true,
-                            FwGate.INSTALL_ENABLED);
+                            FwGate.INSTALL_ENABLED, crossgradeAllowed());
                     main.post(() -> {
                         TextView t = statusViews.get(r.sha256);
                         if (t != null && openSha == null) {
@@ -142,6 +146,34 @@ public class FirmwareActivity extends Activity {
                 });
             }
         });
+    }
+
+    // ---------------------------------------------------------------- crossgrade switch
+
+    /** Off by default; read again before every check and right before sending. */
+    private boolean crossgradeAllowed() {
+        return getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(KEY_CROSSGRADE, false);
+    }
+
+    private View crossgradeSwitch() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(0, dp(12), 0, dp(4));
+        Switch sw = new Switch(this);
+        sw.setText("Разрешить переход на глобальную прошивку");
+        sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        sw.setChecked(crossgradeAllowed());
+        sw.setOnCheckedChangeListener((b, on) -> {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_CROSSGRADE, on).apply();
+            showList();
+        });
+        box.addView(sw);
+        TextView hint = text("Только Smart Band 11 (q66), привязанный как cn или tc, на китайской прошивке 4.100.x, и только "
+                + "полный файл q66gl. Возврат на китайскую через мод невозможен.");
+        hint.setAlpha(0.7f);
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        box.addView(hint);
+        return box;
     }
 
     private String diagnosticsText(DeviceSnapshot s) {
@@ -279,7 +311,7 @@ public class FirmwareActivity extends Activity {
             saveQuietly(r);
         }
         FwName name = FwName.parse(r.originalName);
-        FwPolicy.Verdict v = FwPolicy.evaluate(name, info, s, intact, FwGate.INSTALL_ENABLED);
+        FwPolicy.Verdict v = FwPolicy.evaluate(name, info, s, intact, FwGate.INSTALL_ENABLED, crossgradeAllowed());
         content.removeAllViews();
         header(r.originalName);
         content.addView(mono("Исходное имя: " + r.originalName
@@ -346,7 +378,7 @@ public class FirmwareActivity extends Activity {
             final FwPackage.Info info = FwPackage.inspect(library.file(r.sha256));
             main.post(() -> bridge.readSnapshot(s -> {
                 FwPolicy.Verdict v = FwPolicy.evaluate(FwName.parse(r.originalName), info, s, intact,
-                        FwGate.INSTALL_ENABLED);
+                        FwGate.INSTALL_ENABLED, crossgradeAllowed());
                 if (!v.allowed()) {
                     alert("Установка заблокирована", v.firstProblem(), () -> render(r, info, intact, s));
                     return;
@@ -363,15 +395,41 @@ public class FirmwareActivity extends Activity {
                     msg.append("\n\nВнимание: ").append(w);
                 }
                 msg.append("\n\nФайл будет передан на браслет без изменений. Не отключайте браслет до конца.");
+                final boolean crossgrade = v.warnings.contains(FwPolicy.W_CROSSGRADE);
                 new AlertDialog.Builder(this)
-                        .setTitle("Установить прошивку?")
+                        .setTitle(crossgrade ? "Переход на глобальную прошивку (1 из 2)" : "Установить прошивку?")
                         .setMessage(msg)
-                        .setPositiveButton("Установить", (d, w) -> startInstall(r, info))
+                        .setPositiveButton(crossgrade ? "Далее" : "Установить", (d, w) -> {
+                            if (crossgrade) {
+                                confirmCrossgrade(r, info, intact, s);
+                            } else {
+                                startInstall(r, info);
+                            }
+                        })
                         .setNegativeButton("Отмена", (d, w) -> render(r, info, intact, s))
                         .setCancelable(false)
                         .show();
             }));
         });
+    }
+
+    /** Second confirmation of the crossgrade: the risk text alone, the switch read once more. */
+    private void confirmCrossgrade(final FwLibrary.Record r, final FwPackage.Info info, final boolean intact,
+            final DeviceSnapshot s) {
+        new AlertDialog.Builder(this)
+                .setTitle("Переход на глобальную прошивку (2 из 2)")
+                .setMessage(FwPolicy.W_CROSSGRADE + ".")
+                .setPositiveButton("Перейти на глобальную", (d, w) -> {
+                    if (!crossgradeAllowed()) {
+                        alert("Установка заблокирована", "Переключатель «Разрешить переход на глобальную прошивку» "
+                                + "выключен", () -> render(r, info, intact, s));
+                        return;
+                    }
+                    startInstall(r, info);
+                })
+                .setNegativeButton("Отмена", (d, w) -> render(r, info, intact, s))
+                .setCancelable(false)
+                .show();
     }
 
     private void startInstall(final FwLibrary.Record r, final FwPackage.Info info) {

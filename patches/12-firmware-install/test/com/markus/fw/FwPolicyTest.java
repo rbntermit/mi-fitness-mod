@@ -416,4 +416,141 @@ class FwPolicyTest {
         assertTrue(DeviceSnapshot.compareVersions("4.100.999", "4.200.001") < 0);
         assertEquals(0, DeviceSnapshot.compareVersions("4.200.078", "4.200.78"));
     }
+
+    // ---------------------------------------------------------------- cn/tc on 4.100.x → full q66gl (crossgrade switch)
+
+    static final String CHINA = "4.100.179";
+
+    FwPolicy.Verdict cross(File f, DeviceSnapshot d, boolean switchOn) {
+        return FwPolicy.evaluate(FwName.parse(f.getName()), FwPackage.inspect(f), d, true, true, switchOn);
+    }
+
+    @Test
+    void tcOn4100WithGlobalFileNeedsTheSwitch() throws Exception {
+        File f = glFull("4.200.078");
+        DeviceSnapshot tc = Fixtures.band(TC, HW_NFC, CHINA, 80);
+        assertFails(cross(f, tc, false), C_BRANCH, C_MODEL);
+        FwPolicy.Verdict on = cross(f, tc, true);
+        assertFails(on);
+        assertTrue(on.warnings.contains(W_CROSSGRADE));
+        assertEquals("Переход с китайской прошивки на глобальную. Проверено на одном браслете (NFC, q66tc). "
+                + "Возврат на китайскую через мод невозможен. Делаете на свой риск", W_CROSSGRADE);
+    }
+
+    @Test
+    void cnOn4100WithGlobalFileNeedsTheSwitch() throws Exception {
+        File f = glFull("4.200.078");
+        DeviceSnapshot cn = Fixtures.band(CN, HW_PLAIN, CHINA, 80);
+        // without the switch the q66cn / M2616B1 pair is not accepted at all
+        assertFails(cross(f, cn, false), C_FAMILY, C_SOURCES, C_BRANCH, C_MODEL);
+        FwPolicy.Verdict on = cross(f, cn, true);
+        assertFails(on);
+        assertTrue(on.warnings.contains(W_CROSSGRADE));
+    }
+
+    @Test
+    void crossgradeWithHardwareCodeLinkedElsewhereIsBlocked() throws Exception {
+        String[][] rows = Fixtures.REAL_ROWS.clone();
+        for (int i = 0; i < rows.length; i++) {
+            if (rows[i][2].equals(CN)) {
+                rows[i] = new String[] {rows[i][0], HW_NFC, CN, "false"};
+            }
+        }
+        File f = glFullWithTable("4.200.078", Fixtures.table(rows));
+        assertFails(cross(f, Fixtures.band(CN, HW_PLAIN, CHINA, 80), true), C_FAMILY, C_SOURCES, C_MODEL);
+    }
+
+    @Test
+    void crossgradeWithUnknownHardwareCodeIsBlocked() throws Exception {
+        File f = glFull("4.200.078");
+        assertFails(cross(f, Fixtures.band(CN, "M2699B1", CHINA, 80), true), C_FAMILY, C_SOURCES, C_MODEL);
+        // the code of the other variant does not fit either
+        assertFails(cross(f, Fixtures.band(CN, HW_NFC, CHINA, 80), true), C_FAMILY, C_SOURCES, C_MODEL);
+        assertFails(cross(f, Fixtures.band(TC, HW_PLAIN, CHINA, 80), true), C_FAMILY, C_SOURCES, C_MODEL);
+    }
+
+    @Test
+    void crossgradeWithoutTableIsBlocked() throws Exception {
+        File f = glFullWithTable("4.200.078", "");
+        assertFails(cross(f, Fixtures.band(TC, HW_NFC, CHINA, 80), true), C_FAMILY, C_SOURCES, C_MODEL);
+    }
+
+    @Test
+    void crossgradeNeedsTheHardwareCodeNotTheModelId() throws Exception {
+        assertFails(cross(glFull("4.200.078"), Fixtures.band(CN, CN, CHINA, 80), true), C_MODEL);
+    }
+
+    @Test
+    void crossgradeNeedsMd5InTheName() throws Exception {
+        File named = glFull("4.200.078");
+        File plain = tmp.resolve("upd_" + GL + ".zip").toFile();
+        Files.move(named.toPath(), plain.toPath());
+        assertFails(cross(plain, Fixtures.band(TC, HW_NFC, CHINA, 80), true), C_MD5);
+    }
+
+    @Test
+    void crossgradeStillNeedsChargeAndGate() throws Exception {
+        File f = glFull("4.200.078");
+        assertFails(cross(f, Fixtures.band(TC, HW_NFC, CHINA, 49), true), C_BATTERY);
+        FwPolicy.Verdict gateOff = FwPolicy.evaluate(FwName.parse(f.getName()), FwPackage.inspect(f),
+                Fixtures.band(TC, HW_NFC, CHINA, 80), true, false, true);
+        assertFails(gateOff, C_GATE);
+    }
+
+    @Test
+    void diffPackageIsNeverACrossgrade() throws Exception {
+        File f = Fixtures.diff(tmp, GL);
+        FwPolicy.Verdict v = cross(f, Fixtures.band(TC, HW_NFC, CHINA, 80), true);
+        assertFalse(v.allowed());
+        assertTrue(v.failed(C_TYPE));
+        assertTrue(v.failed(C_BRANCH));
+        assertFalse(v.warnings.contains(W_CROSSGRADE));
+    }
+
+    @Test
+    void chineseFileOn4100IsUntouchedByTheSwitch() throws Exception {
+        File f = Fixtures.full(tmp, CN, "4.100.200", "cn", CN);
+        assertFails(cross(f, Fixtures.band(CN, CN, CHINA, 80), false));
+        FwPolicy.Verdict on = cross(f, Fixtures.band(CN, CN, CHINA, 80), true);
+        assertFails(on);
+        assertFalse(on.warnings.contains(W_CROSSGRADE));
+        // a cn file for the NFC model stays blocked
+        assertTrue(cross(f, Fixtures.band(TC, HW_NFC, CHINA, 80), true).failed(C_MODEL));
+    }
+
+    @Test
+    void globalToChineseStaysBlockedWithTheSwitchOn() throws Exception {
+        File cn = Fixtures.full(tmp, CN, "4.100.200", "cn", CN);
+        assertFails(cross(cn, Fixtures.band(CN, CN, "4.200.078", 80), true), C_BRANCH, C_MODEL, C_NEWER);
+        File tc = Fixtures.full(tmp, TC, "4.100.200", "tc", CN);
+        FwPolicy.Verdict v = cross(tc, Fixtures.band(TC, HW_NFC, "4.200.078", 80), true);
+        assertFalse(v.allowed());
+        assertTrue(v.failed(C_BRANCH));
+    }
+
+    @Test
+    void otherFamilyIsNeverACrossgrade() throws Exception {
+        String q77 = "miwear.watch.q77cn";
+        FwPolicy.Verdict v = cross(glFull("4.200.078"), Fixtures.band(q77, q77, CHINA, 80), true);
+        assertFalse(v.allowed());
+        assertTrue(v.failed(C_FAMILY));
+        assertTrue(v.failed(C_BRANCH));
+        assertFalse(v.warnings.contains(W_CROSSGRADE));
+    }
+
+    @Test
+    void globalBoundBandOn4100IsNotACrossgrade() throws Exception {
+        FwPolicy.Verdict v = cross(glFull("4.200.078"), Fixtures.band(GL, GL, CHINA, 80), true);
+        assertFails(v, C_BRANCH);
+        assertFalse(v.warnings.contains(W_CROSSGRADE));
+    }
+
+    @Test
+    void globalFileWithChineseBuildIdIsNotACrossgrade() throws Exception {
+        File f = Fixtures.full(tmp, GL, "4.200.078", "cn", CN);
+        FwPolicy.Verdict v = cross(f, Fixtures.band(TC, HW_NFC, CHINA, 80), true);
+        assertFalse(v.allowed());
+        assertTrue(v.failed(C_REGION));
+        assertFalse(v.warnings.contains(W_CROSSGRADE));
+    }
 }

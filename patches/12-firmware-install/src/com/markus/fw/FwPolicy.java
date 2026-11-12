@@ -11,6 +11,15 @@ public final class FwPolicy {
     /** Branch of the global firmware (4.200.078-gl); the Chinese one is 4.100.x (4.100.179-cn). */
     static final String GLOBAL_BRANCH = "4.200";
     static final int MIN_BATTERY = 50;
+    /** Branch of the Chinese firmware (4.100.x); the only branch the cn/tc → gl crossgrade starts from. */
+    static final String CHINA_BRANCH = "4.100";
+    static final String Q66_FAMILY = "q66";
+    static final String Q66_GLOBAL = "miwear.watch.q66gl";
+    static final String CN_MODEL = "miwear.watch.q66cn";
+    static final String CN_HARDWARE = "M2616B1";
+    /** Shown and confirmed twice before a crossgrade. */
+    public static final String W_CROSSGRADE = "Переход с китайской прошивки на глобальную. Проверено на одном браслете "
+            + "(NFC, q66tc). Возврат на китайскую через мод невозможен. Делаете на свой риск";
     /** Product.ota value of the general OTA path (prepareOta + sendFile). Other modes are not supported. */
     static final int OTA_MODE_GENERAL = 2;
 
@@ -89,7 +98,7 @@ public final class FwPolicy {
     /**
      * The one pair where the band reports a hardware code instead of a model id: an NFC Band 11 bound as q66tc says
      * "M2617B1". It counts as the band confirming q66tc only when the miwear_product.json of the file being installed
-     * links exactly these two. No other pair is accepted this way.
+     * links exactly these two. Outside the cn/tc → gl crossgrade no other pair is accepted this way.
      */
     static final String TC_MODEL = "miwear.watch.q66tc";
     static final String TC_HARDWARE = "M2617B1";
@@ -99,46 +108,78 @@ public final class FwPolicy {
     static final class ModelMatch {
         /** The band confirmed the bound model (directly or through the file's table). */
         final boolean confirmed;
-        /** Confirmed through the q66tc / M2617B1 rule, not by an identical model id. */
-        final boolean tcByHardware;
+        /** Confirmed through a hardware code the file's table links to the bound model, not by an identical model id. */
+        final boolean byHardware;
         final String detail;
 
-        ModelMatch(boolean confirmed, boolean tcByHardware, String detail) {
+        ModelMatch(boolean confirmed, boolean byHardware, String detail) {
             this.confirmed = confirmed;
-            this.tcByHardware = tcByHardware;
+            this.byHardware = byHardware;
             this.detail = detail;
         }
     }
 
+    /**
+     * Hardware code the band may report instead of the bound model id: always M2617B1 for q66tc; M2616B1 for q66cn
+     * only during the crossgrade (the switch is on and the file is a full q66gl for a band on 4.100.x).
+     */
+    static String hardwareCodeFor(String boundModel, boolean crossgrade) {
+        if (TC_MODEL.equals(boundModel)) {
+            return TC_HARDWARE;
+        }
+        return crossgrade && CN_MODEL.equals(boundModel) ? CN_HARDWARE : null;
+    }
+
     static ModelMatch matchModel(DeviceSnapshot d, FwPackage.Info file) {
+        return matchModel(d, file, false);
+    }
+
+    static ModelMatch matchModel(DeviceSnapshot d, FwPackage.Info file, boolean crossgrade) {
         if (!d.watchInfoOk) {
             return new ModelMatch(false, false, "браслет не сообщил модель");
         }
         if (d.boundModel != null && d.boundModel.equals(d.reportedModel)) {
             return new ModelMatch(true, false, null);
         }
-        if (!(TC_MODEL.equals(d.boundModel) && TC_HARDWARE.equals(d.reportedModel))) {
+        String code = hardwareCodeFor(d.boundModel, crossgrade);
+        if (code == null || !code.equals(d.reportedModel)) {
             return new ModelMatch(false, false, "привязка " + d.boundModel + ", браслет " + d.reportedModel
                     + " — эта пара не подтверждает модель");
         }
-        String pair = "привязка q66tc, браслет M2617B1";
+        String shortModel = d.boundModel.substring(d.boundModel.lastIndexOf('.') + 1);
+        String pair = "привязка " + shortModel + ", браслет " + code;
         if (!file.productTableFound) {
             return new ModelMatch(false, false, pair + ": в файле нет таблицы miwear_product.json, связь проверить нельзя");
         }
         if (file.productTableError != null) {
             return new ModelMatch(false, false, pair + ": " + file.productTableError);
         }
-        if (!file.hasDeviceModel(TC_HARDWARE)) {
-            return new ModelMatch(false, false, pair + ": в таблице файла нет M2617B1");
+        if (!file.hasDeviceModel(code)) {
+            return new ModelMatch(false, false, pair + ": в таблице файла нет " + code);
         }
-        java.util.Set<String> codes = file.deviceModelsOf(TC_MODEL);
+        java.util.Set<String> codes = file.deviceModelsOf(d.boundModel);
         if (codes.isEmpty()) {
-            return new ModelMatch(false, false, pair + ": в таблице файла нет q66tc");
+            return new ModelMatch(false, false, pair + ": в таблице файла нет " + shortModel);
         }
-        if (!codes.equals(java.util.Collections.singleton(TC_HARDWARE))) {
-            return new ModelMatch(false, false, pair + ": в таблице файла q66tc связан с " + codes + ", а не только с M2617B1");
+        if (!codes.equals(java.util.Collections.singleton(code))) {
+            return new ModelMatch(false, false, pair + ": в таблице файла " + shortModel + " связан с " + codes
+                    + ", а не только с " + code);
         }
-        return new ModelMatch(true, true, pair + ": в таблице файла M2617B1 связан с q66tc");
+        return new ModelMatch(true, true, pair + ": в таблице файла " + code + " связан с " + shortModel);
+    }
+
+    /**
+     * The cn/tc → gl crossgrade is what is being asked: a q66 band bound as cn or tc that itself reports the Chinese
+     * branch 4.100.x, and a full q66gl package whose ro.build.id says gl on the global branch 4.200.x. Whether it is
+     * allowed is decided by the switch and the checks; this only recognizes the case.
+     */
+    static boolean isCrossgrade(FwName name, FwPackage.Info file, DeviceSnapshot d) {
+        String[] bound = FwName.splitModel(d.boundModel);
+        return name.recognized() && Q66_GLOBAL.equals(name.model)
+                && file.type == FwPackage.Type.FULL && file.version != null && "gl".equals(file.region)
+                && GLOBAL_BRANCH.equals(DeviceSnapshot.branch(file.version))
+                && d.watchInfoOk && CHINA_BRANCH.equals(DeviceSnapshot.branch(d.liveVersion))
+                && Q66_FAMILY.equals(bound[0]) && ("cn".equals(bound[1]) || "tc".equals(bound[1]));
     }
 
     private FwPolicy() {
@@ -146,7 +187,18 @@ public final class FwPolicy {
 
     public static Verdict evaluate(FwName name, FwPackage.Info file, DeviceSnapshot d, boolean copyIntact,
             boolean installEnabled) {
+        return evaluate(name, file, d, copyIntact, installEnabled, false);
+    }
+
+    /**
+     * @param crossgradeEnabled the «Разрешить переход на глобальную прошивку» switch of the firmware screen (off by
+     *     default): only then may a q66 band bound as cn or tc on 4.100.x take a full q66gl package (4.200.x).
+     */
+    public static Verdict evaluate(FwName name, FwPackage.Info file, DeviceSnapshot d, boolean copyIntact,
+            boolean installEnabled, boolean crossgradeEnabled) {
         Verdict v = new Verdict();
+        boolean crossCase = isCrossgrade(name, file, d);
+        boolean cross = crossCase && crossgradeEnabled;
 
         v.add(C_COPY, copyIntact, copyIntact ? null : "SHA-256 копии не совпадает с записью, файл нужно добавить заново");
         v.add(C_ZIP, file.zipOk, file.zipOk ? null : file.zipError);
@@ -159,6 +211,8 @@ public final class FwPolicy {
         if (name.md5 != null) {
             boolean same = name.md5.equals(file.md5);
             v.add(C_MD5, same, same ? null : "в имени " + name.md5 + ", у файла " + file.md5);
+        } else if (cross) {
+            v.add(C_MD5, false, "для перехода на глобальную нужен файл с MD5 в имени, как его раздаёт Xiaomi");
         } else {
             v.add(C_MD5, true, "в имени нет MD5; целостность проверена по CRC записей ZIP");
         }
@@ -177,11 +231,11 @@ public final class FwPolicy {
                 ? "в имени " + name.region + ", в ro.build.id " + file.region
                 : "нет данных для сравнения");
 
-        ModelMatch match = matchModel(d, file);
+        ModelMatch match = matchModel(d, file, cross);
         String boundFamily = FwName.splitModel(d.boundModel)[0];
         // a hardware code like M2617B1 has no family of its own; it inherits the bound one only when the file confirms the pair
         String reportedFamily = !d.watchInfoOk ? null
-                : match.tcByHardware ? boundFamily : FwName.splitModel(d.reportedModel)[0];
+                : match.byHardware ? boundFamily : FwName.splitModel(d.reportedModel)[0];
         String imageFamily = file.imageFamily();
         boolean familyOk = named && imageFamily != null && boundFamily != null && reportedFamily != null
                 && name.family.equals(imageFamily) && name.family.equals(boundFamily)
@@ -203,12 +257,23 @@ public final class FwPolicy {
 
         String current = d.watchInfoOk ? DeviceSnapshot.branch(d.liveVersion) : null;
         String target = hasVersion ? DeviceSnapshot.branch(file.version) : null;
-        boolean branchOk = current != null && current.equals(target);
-        v.add(C_BRANCH, branchOk, current == null ? "ветку браслета подтвердить нельзя"
-                : target == null ? "ветка файла неизвестна"
-                : branchOk ? current + ".x" : "переход " + current + ".x → " + target + ".x этой функцией запрещён");
+        if (crossCase) {
+            v.add(C_BRANCH, cross, cross
+                    ? "переход " + current + ".x → " + target + ".x (китайская → глобальная) разрешён переключателем"
+                    : "переход " + current + ".x → " + target + ".x выключен: включите «Разрешить переход на глобальную "
+                            + "прошивку» на экране «Прошивки»");
+        } else {
+            boolean branchOk = current != null && current.equals(target);
+            v.add(C_BRANCH, branchOk, current == null ? "ветку браслета подтвердить нельзя"
+                    : target == null ? "ветка файла неизвестна"
+                    : branchOk ? current + ".x" : "переход " + current + ".x → " + target + ".x этой функцией запрещён");
+        }
 
-        modelRule(v, name, d, current, match, file);
+        if (cross) {
+            crossgradeRule(v, d, match);
+        } else {
+            modelRule(v, name, d, current, match, file);
+        }
 
         boolean newer = false;
         String newerDetail = "нет данных для сравнения";
@@ -230,6 +295,21 @@ public final class FwPolicy {
         return v;
     }
 
+    /**
+     * Model rule of the crossgrade: the band must itself report the hardware code (M2616B1 for q66cn, M2617B1 for
+     * q66tc) and the table inside this very file must link that code to the bound model and to nothing else.
+     */
+    private static void crossgradeRule(Verdict v, DeviceSnapshot d, ModelMatch match) {
+        if (match.byHardware) {
+            v.add(C_MODEL, true, match.detail + "; переход китайская → глобальная");
+            v.warnings.add(W_CROSSGRADE);
+        } else {
+            v.add(C_MODEL, false, "для перехода браслет должен сам сообщить аппаратный код "
+                    + hardwareCodeFor(d.boundModel, true) + ", а таблица miwear_product.json файла — связывать его "
+                    + "с моделью из привязки" + (match.detail == null ? "" : " (" + match.detail + ")"));
+        }
+    }
+
     /** Which file region fits which band, by the owner's rules. */
     private static void modelRule(Verdict v, FwName name, DeviceSnapshot d, String currentBranch, ModelMatch match,
             FwPackage.Info info) {
@@ -244,7 +324,7 @@ public final class FwPolicy {
             if ("gl".equals(file)) {
                 // the only exception: the band itself confirmed q66tc as M2617B1 through this file's table,
                 // it already runs the global branch, and the file is a full q66gl package
-                boolean exception = match.tcByHardware && GLOBAL_BRANCH.equals(currentBranch)
+                boolean exception = match.byHardware && GLOBAL_BRANCH.equals(currentBranch)
                         && "miwear.watch.q66gl".equals(name.model) && info.type == FwPackage.Type.FULL;
                 if (exception) {
                     v.add(C_MODEL, true, "q66tc подтверждён браслетом (M2617B1 по таблице файла), на браслете уже ветка "
