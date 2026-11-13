@@ -13,7 +13,7 @@ cp -r "$ROOT/patches" "$REPO/patches"
 cp "$ROOT/build.sh" "$REPO/build.sh"
 mkdir -p "$REPO/scripts" "$REPO/release"
 for s in make_hooks.pl text_rules.pl ru_from.pl check_param_regs.awk TreeDiff.java phone-verify.sh logcap.sh check-repo.sh \
-         make-repo.sh; do
+         make-repo.sh publish-release.sh; do
     cp "$ROOT/scripts/$s" "$REPO/scripts/$s"
 done
 cp "$ROOT/release/status.md" "$REPO/release/status.md"
