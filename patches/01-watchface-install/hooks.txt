@@ -1,0 +1,9 @@
+# 01: answers of the watch face market for faces installed from a file (com.markus.facefix.FaceFix).
+# OkCallback is the 00-core class that wraps every okhttp callback; FaceFix runs last, right before the app's own
+# callback gets the answer.
+CLASS com/markus/OkCallback
+METHOD onResponse(Lokhttp3/Call;Lokhttp3/Response;)V
+AT before iget-object v0, p0, Lcom/markus/OkCallback;->target:Lokhttp3/Callback;
+CODE
+    invoke-static {p0, p2}, Lcom/markus/facefix/FaceFix;->after(Lcom/markus/OkCallback;Lokhttp3/Response;)Lokhttp3/Response;
+    move-result-object p2

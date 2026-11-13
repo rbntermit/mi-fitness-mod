@@ -2069,3 +2069,30 @@
 
     return-void
 .end method
+
+.method public emptyWatchface()Lorg/json/JSONObject;
+    .locals 1
+    .annotation system Ldalvik/annotation/Throws;
+        value = {
+            Lorg/json/JSONException;
+        }
+    .end annotation
+
+    # public entry for patch 01 (com.markus.facefix.FaceFix)
+    invoke-direct {p0}, Lcom/markus/OkCallback;->createEmptyWatchface()Lorg/json/JSONObject;
+
+    move-result-object v0
+
+    return-object v0
+.end method
+
+.method public patchEntryLocal(Ljava/lang/String;Lorg/json/JSONObject;)Z
+    .locals 1
+
+    # public entry for patch 01: fills the entry from the mod's local files of this face id; false when there are none
+    invoke-direct {p0, p1, p2}, Lcom/markus/OkCallback;->patchEntry(Ljava/lang/String;Lorg/json/JSONObject;)Z
+
+    move-result v0
+
+    return v0
+.end method

@@ -11,4 +11,11 @@ public class a {
             int type, String icon, String title, String subtitle, String settingsKey) {
         return null;
     }
+    public static String getSecurity() {
+        throw new UnsupportedOperationException("stub");
+    }
+
+    public static boolean isBase64(String s) {
+        throw new UnsupportedOperationException("stub");
+    }
 }

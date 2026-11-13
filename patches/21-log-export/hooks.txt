@@ -1,0 +1,20 @@
+# 21: logs people can actually get. Applied after 00-core (LogSyncCallback is its class) and after 18, so the menu
+# hook sits right after com.markus.a.insertSubMenus like the one of patch 18.
+
+# «Сбор журналов»: the band accepted the request; instead of a dialog with a path in Android/data (not reachable on
+# Android 11+) open the export screen, which waits for the files and offers «Сохранить как…» and «Поделиться»
+CLASS com/markus/LogSyncCallback
+METHOD onSuccess(Ljava/lang/String;ILcom/xiaomi/fitness/device/contact/export/SyncResult;)V
+TEMPS 2
+CODE
+    iget-object v0, p0, Lcom/markus/LogSyncCallback;->context:Landroid/content/Context;
+    iget-object v1, p0, Lcom/markus/LogSyncCallback;->path:Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/markus/logexport/LogExport;->bandLogReady(Landroid/content/Context;Ljava/lang/String;)V
+    return-void
+
+# Устройство -> Ещё -> «Журнал приложения»; v1 = the item list, v6 = the sub-menu type (set by 00-core)
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel
+METHOD createSettingItems(I)V
+AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
+CODE
+    invoke-static {v1, v6}, Lcom/markus/logexport/LogExport;->insertMenu(Landroidx/databinding/ObservableArrayList;I)V

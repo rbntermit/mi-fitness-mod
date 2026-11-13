@@ -1,0 +1,1 @@
+<activity android:exported="false" android:name="com.markus.logexport.LogExportActivity" android:label="Журнал" android:theme="@android:style/Theme.Material.Light.DarkActionBar"/>
