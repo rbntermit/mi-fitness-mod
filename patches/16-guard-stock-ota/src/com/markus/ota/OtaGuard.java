@@ -32,7 +32,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class OtaGuard {
     public static final String MESSAGE = "Штатное обновление отключено, используйте экран «Прошивки»";
-    private static final String TAG = "MarkusOtaGuard";
+    private static final String TAG = "MOD";
     private static final String PERMIT_FILE = "markus_ota_permit";
     private static final String[] OFFER_KEYS = {"key_latest_version", "key_ota_upgrade_result"};
 
@@ -69,7 +69,7 @@ public final class OtaGuard {
                 version = info.getFirmwareVersion();
             }
         } catch (RuntimeException e) {
-            Log.w(TAG, "band not readable", e);
+            Log.w(TAG, "ota: band not readable", e);
         }
         // the cached DeviceInfo version can be empty; the stock check has just read it from the band
         if (StockOtaPolicy.clean(version) == null) {
@@ -79,7 +79,7 @@ public final class OtaGuard {
         String line = d.toString();
         if (!line.equals(lastLogged)) {
             lastLogged = line;
-            Log.i(TAG, "stock OTA " + line);
+            Log.i(TAG, "ota: stock OTA " + line);
         }
         return d;
     }
@@ -130,7 +130,7 @@ public final class OtaGuard {
                 }
             }
         } catch (ReflectiveOperationException | RuntimeException e) {
-            Log.w(TAG, "upgrade screen offer not read", e);
+            Log.w(TAG, "ota: upgrade screen offer not read", e);
         }
         if (!(offer == null ? currentBlocked("screen", true) : entryBlocked("screen", offer))) {
             return;
@@ -143,7 +143,7 @@ public final class OtaGuard {
                     ((Activity) a).finish();
                 }
             } catch (ReflectiveOperationException | RuntimeException e) {
-                Log.w(TAG, "stock upgrade screen not closed", e);
+                Log.w(TAG, "ota: stock upgrade screen not closed", e);
             }
         });
     }
@@ -174,7 +174,7 @@ public final class OtaGuard {
             return false;
         }
         setPermit(p);
-        Log.i(TAG, "permit granted for the firmware screen");
+        Log.i(TAG, "ota: permit granted for the firmware screen");
         return true;
     }
 
@@ -183,7 +183,7 @@ public final class OtaGuard {
         permit = null;
         File f = permitFile();
         if (f != null && f.exists() && !f.delete()) {
-            Log.w(TAG, "permit file not deleted");
+            Log.w(TAG, "ota: permit file not deleted");
         }
     }
 
@@ -197,7 +197,7 @@ public final class OtaGuard {
             synchronized (OtaGuard.class) {
                 setPermit(OtaPermit.stock(now));
             }
-            Log.i(TAG, "stock update allowed by policy: transfer permitted for " + OtaPermit.TTL_MS / 1000 + " s");
+            Log.i(TAG, "ota: stock update allowed by policy: transfer permitted for " + OtaPermit.TTL_MS / 1000 + " s");
             return false;
         }
         stockBlocked(where);
@@ -220,7 +220,7 @@ public final class OtaGuard {
         if (OtaPermit.fileAllowed(type, currentPermit(), path, System.currentTimeMillis())) {
             return false;
         }
-        Log.w(TAG, "firmware file transfer blocked (type " + type + ")");
+        Log.w(TAG, "ota: firmware file transfer blocked (type " + type + ")");
         return true;
     }
 
@@ -228,13 +228,13 @@ public final class OtaGuard {
 
     /** A refused step the person sees: log and the notice. */
     public static void stockBlocked(String where) {
-        Log.w(TAG, "stock update blocked: " + where);
+        Log.w(TAG, "ota: stock update blocked: " + where);
         toast();
     }
 
     /** A refused background step: log only. */
     public static void stockSkipped(String where) {
-        Log.i(TAG, "stock update skipped: " + where);
+        Log.i(TAG, "ota: stock update skipped: " + where);
     }
 
     private static void setPermit(OtaPermit p) {
@@ -246,7 +246,7 @@ public final class OtaGuard {
         try (FileOutputStream out = new FileOutputStream(f)) {
             out.write(p.encode().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            Log.w(TAG, "permit file not written", e);
+            Log.w(TAG, "ota: permit file not written", e);
         }
     }
 
@@ -271,7 +271,7 @@ public final class OtaGuard {
             }
             return OtaPermit.decode(new String(buf, 0, n, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            Log.w(TAG, "permit file not read", e);
+            Log.w(TAG, "ota: permit file not read", e);
             return null;
         }
     }
@@ -305,7 +305,7 @@ public final class OtaGuard {
             m.setAccessible(true);
             m.invoke(target, args);
         } catch (ReflectiveOperationException | RuntimeException e) {
-            Log.w(TAG, "caller not notified: " + name, e);
+            Log.w(TAG, "ota: caller not notified: " + name, e);
         }
     }
 }

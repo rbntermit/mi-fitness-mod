@@ -1,0 +1,9 @@
+# 02: «Сторонние приложения» in the mod menu opens the mod's own install screen (com.markus.rpk.RpkInstallActivity).
+# 3.60 removed the debug page this item used to open (XmsManager.gotoDebugPage); 00-core leaves a notice there.
+CLASS com/markus/a
+METHOD handleDebugMenu(Landroid/app/Activity;Lcom/xiaomi/fitness/device/manager/export/bean/TabContentItem;)Z
+TEMPS 1
+CODE
+    invoke-static {p0}, Lcom/markus/rpk/RpkInstallActivity;->open(Landroid/app/Activity;)Z
+    move-result v0
+    return v0

@@ -1,0 +1,31 @@
+# 05: MOD lines in the app log for the one-way «Не беспокоить» sync (trySyncManualZenRule is added by smali.patch).
+# No identifiers: only what was decided.
+
+# the band reports zen rule sync (capability bit 4): the phone's DND state goes to the band as manual_zen_rule
+CLASS com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper
+METHOD trySyncManualZenRule()Z
+AT before invoke-direct \{p0, v1\}, Lcom/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper;->syncZenRule
+CODE
+    iget v2, v0, Lnjr;->c:I
+    invoke-static {v2}, Ljava/lang/String;->valueOf(I)Ljava/lang/String;
+    move-result-object v2
+    const-string v3, "dnd: phone DND sent to the band as manual_zen_rule, state "
+    invoke-virtual {v3, v2}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v2
+    const-string v3, "MOD"
+    invoke-static {v3, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+# no band, or the band does not report zen rule sync: the stock path decides (it relies on MIUI on the phone);
+# «Простая синхронизация „Не беспокоить“» (MarkusZenSync, off by default) may send the rule anyway, with MOD lines
+CLASS com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper
+METHOD trySyncManualZenRule()Z
+AT after ^\s*:cond_0$
+CODE
+    invoke-static {}, LMarkusZenSync;->onStockPath()V
+
+# Устройство -> Ещё -> настройки мода: the switch, only for bands without zen rule sync; v1 = list, v6 = sub-menu type
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel
+METHOD createSettingItems(I)V
+AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
+CODE
+    invoke-static {v1, v6}, LMarkusZenSync;->insertSwitch(Landroidx/databinding/ObservableArrayList;I)V

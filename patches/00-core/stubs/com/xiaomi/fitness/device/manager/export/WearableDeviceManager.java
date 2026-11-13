@@ -5,4 +5,5 @@ public class WearableDeviceManager implements com.xiaomi.fitness.device.manager.
     public static final class Companion {
     }
     public com.xiaomi.fitness.device.manager.DeviceModel getCurrentDeviceModel() { return null; }
+    public long getDeviceCapabilityV3(String did) { return 0; }
 }

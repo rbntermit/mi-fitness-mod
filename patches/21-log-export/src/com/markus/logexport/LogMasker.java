@@ -10,10 +10,10 @@ import java.util.regex.Pattern;
  * texts are not recognised, which is why the export screen warns before sharing.
  */
 public final class LogMasker {
-    static final String HIDDEN = "<скрыто>";
+    static final String HIDDEN = "<hidden>";
     static final String MAC = "<MAC>";
     static final String EMAIL = "<email>";
-    static final String PHONE = "<телефон>";
+    static final String PHONE = "<phone>";
 
     private static final Pattern COOKIE = Pattern.compile("(?i)(\\b(?:set-)?cookie\\b\\s*[:=]\\s*)[^\\r\\n]+");
     private static final Pattern BEARER = Pattern.compile("(?i)(\\b(?:bearer|basic)\\s+)[A-Za-z0-9._~+/=-]{8,}");

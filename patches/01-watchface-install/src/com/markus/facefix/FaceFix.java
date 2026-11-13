@@ -4,6 +4,8 @@ import android.util.Log;
 import com.markus.OkCallback;
 import com.markus.Rc4Codec;
 import com.markus.a;
+import com.xiaomi.fitness.watch.face.data.FaceManager;
+import com.xiaomi.fitness.watch.face.export.data.WatchFace;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Response;
@@ -25,7 +27,7 @@ import org.json.JSONObject;
  * (files/WatchFace/&lt;did&gt;/&lt;id&gt;/local) are answered here; every other answer is passed on untouched.
  */
 public final class FaceFix {
-    private static final String TAG = "MarkusFaceFix";
+    private static final String TAG = "MOD";
 
     private FaceFix() {
     }
@@ -45,7 +47,7 @@ public final class FaceFix {
                     return r;
             }
         } catch (Exception e) {
-            Log.w(TAG, "watch face answer left as it is", e);
+            Log.w(TAG, "face: answer left as it is", e);
             return r;
         }
     }
@@ -159,7 +161,7 @@ public final class FaceFix {
         if (!changed) {
             return r;
         }
-        Log.i(TAG, "installed list: local faces filled in");
+        Log.i(TAG, "face: installed list filled from the mod's files");
         return replace(r, body, encrypted, security, nonce, json);
     }
 
@@ -184,8 +186,21 @@ public final class FaceFix {
             return r;
         }
         JSONObject e = cb.emptyWatchface();
-        if (!cb.patchEntryLocal(id, e)) {
-            return r;
+        String how;
+        if (cb.patchEntryLocal(id, e)) {
+            how = "the mod's files";
+        } else {
+            // a face on the band without the mod's files (installed before band-3 or before the app was reinstalled):
+            // open the screen with what the band knows, no preview; ble_ext.type stays 0, so «Изменить» is hidden
+            WatchFace onBand = bandFace(id);
+            if (onBand == null) {
+                return r;
+            }
+            e.put("id", id);
+            String name = onBand.getName();
+            e.put("display_name", name == null ? "" : name);
+            e.put("status", 101);
+            how = "the band's list, no mod files";
         }
         if (json == null) {
             json = emptyAnswer();
@@ -196,8 +211,19 @@ public final class FaceFix {
         }
         json.put("code", 0);
         result.put("watchface", e);
-        Log.i(TAG, "detail: answered from the local files of a face installed from a file");
+        Log.i(TAG, "face: detail answered from " + how);
         boolean encrypted = body.trim().isEmpty() || a.isBase64(body.trim());
         return replace(r, body, encrypted, security, nonce, json);
+    }
+
+    /** The face as the app knows it from the bound band; null when it is not on the band. */
+    private static WatchFace bandFace(String id) {
+        try {
+            FaceManager m = FaceManager.INSTANCE;
+            return m == null ? null : m.getFace(id);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "face: band list not readable", e);
+            return null;
+        }
     }
 }

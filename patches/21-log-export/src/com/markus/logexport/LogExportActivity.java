@@ -64,7 +64,7 @@ public class LogExportActivity extends Activity {
     private static final int STABLE_POLLS = 3;
     private static final long BAND_WAIT_MS = 12 * 60 * 1000;
     private static final long KEEP_MS = 24L * 60 * 60 * 1000;
-    private static final String TAG = "MarkusLogExport";
+    private static final String TAG = "MOD";
 
     static final String PRIVACY = "Журнал может содержать личные данные: названия приложений, тексты уведомлений, "
             + "имена контактов, места и время. Мод скрывает токены входа, идентификаторы аккаунта и устройства, "
@@ -76,6 +76,8 @@ public class LogExportActivity extends Activity {
     private TextView status;
     private Button save;
     private Button share;
+    private Button record;
+    private Button snapshot;
     private File result;
     private String mime;
     private String bandDir;
@@ -100,9 +102,22 @@ public class LogExportActivity extends Activity {
         TextView warn = text(PRIVACY);
         warn.setTypeface(null, Typeface.BOLD);
         content.addView(warn);
-        status = text(band ? "Ждём журнал от браслета…" : "Собираю журнал…");
+        status = text(band ? "Ждём журнал от браслета…"
+                : "Чтобы поймать ошибку целиком, нажмите «Начать запись», повторите то, что не работает, вернитесь сюда "
+                        + "и нажмите «Остановить и сохранить». На некоторых телефонах (OnePlus и другие) система хранит "
+                        + "только последнюю минуту журнала, поэтому запись надёжнее.");
         status.setPadding(0, dp(16), 0, dp(16));
         content.addView(status);
+        if (!band) {
+            record = button("Начать запись", v -> toggleRecording());
+            content.addView(record);
+            snapshot = button("Последние " + APP_LOG_MINUTES + " минут", v -> {
+                snapshot.setEnabled(false);
+                status.setText("Собираю журнал…");
+                io.execute(this::collectAppLog);
+            });
+            content.addView(snapshot);
+        }
         save = button("Сохранить как…", v -> saveAs());
         share = button("Поделиться", v -> confirmShare());
         save.setEnabled(false);
@@ -119,8 +134,88 @@ public class LogExportActivity extends Activity {
             pollBand();
         } else {
             mime = "text/plain";
-            io.execute(this::collectAppLog);
+            showRecorder();
         }
+    }
+
+    // ---------------------------------------------------------------- recording
+
+    private void toggleRecording() {
+        LogRecorder r = LogRecorder.current();
+        if (r != null && !r.finished) {
+            record.setEnabled(false);
+            status.setText("Останавливаю запись…");
+            io.execute(() -> {
+                r.stop();
+                main.post(this::showRecorder);
+            });
+            return;
+        }
+        io.execute(() -> {
+            try {
+                File out = new File(exportDir(), "mi-fitness-app-log-" + stamp() + ".txt");
+                LogRecorder.start(this, out, header("@PERIOD@", ownPids().size()));
+                main.post(this::showRecorder);
+            } catch (IOException | RuntimeException e) {
+                Log.w(TAG, "recording not started", e);
+                main.post(() -> failed("Не удалось начать запись: " + e.getMessage()));
+            }
+        });
+    }
+
+    /** Shows the state of the process-wide recording; refreshes every second while it runs. */
+    private void showRecorder() {
+        if (finished) {
+            return;
+        }
+        LogRecorder r = LogRecorder.current();
+        if (r == null) {
+            return;
+        }
+        long s = r.elapsedMs() / 1000;
+        String time = s / 60 + ":" + String.format(Locale.US, "%02d", s % 60);
+        if (!r.finished) {
+            record.setText("Остановить и сохранить");
+            record.setEnabled(true);
+            snapshot.setEnabled(false);
+            status.setText("Идёт запись: " + time + ", строк: " + r.kept + ".\nПовторите то, что не работает "
+                    + "(можно уйти с этого экрана), затем вернитесь сюда и нажмите «Остановить и сохранить». "
+                    + "Запись остановится сама через " + LogRecorder.MAX_MS / 60000 + " минут.");
+            main.postDelayed(this::showRecorder, 1000);
+            return;
+        }
+        record.setText("Начать запись");
+        record.setEnabled(true);
+        snapshot.setEnabled(true);
+        if (r.error != null) {
+            failed("Запись прервалась: " + r.error);
+        } else if (r.kept == 0) {
+            failed("За время записи (" + time + ") приложение ничего не записало в журнал.");
+        } else {
+            ready(r.file, "Запись остановлена: " + time + ", строк: " + r.kept + ", " + kb(r.file.length())
+                    + (r.truncated ? " (остановлена по ограничению)" : "") + ".");
+        }
+    }
+
+    /** Header of a text log: mod version, band, phone, Android. @PERIOD@ is filled in by the recorder. */
+    private String header(String period, int processes) {
+        String band = null;
+        try {
+            com.xiaomi.fitness.device.manager.DeviceManager dm =
+                    com.xiaomi.fitness.device.manager.export.DeviceManagerExtKt.getInstance(
+                            com.xiaomi.fitness.device.manager.export.WearableDeviceManager.Companion);
+            com.xiaomi.fitness.device.manager.DeviceModel m = dm == null ? null : dm.getCurrentDeviceModel();
+            com.xiaomi.fitness.device.manager.bean.DeviceInfo info = m == null ? null : m.getDeviceInfo();
+            if (info != null) {
+                String fw = info.getFirmwareVersion();
+                band = info.getModel() + (fw == null || fw.isEmpty() ? "" : ", прошивка " + fw);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "band not readable for the log header", e);
+        }
+        String phone = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android "
+                + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")";
+        return LogHeader.build(versionText(), band, phone, period, processes);
     }
 
     @Override
@@ -228,15 +323,14 @@ public class LogExportActivity extends Activity {
             LogLines.Result r;
             try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
                     Writer w = new OutputStreamWriter(new FileOutputStream(out), StandardCharsets.UTF_8)) {
-                w.write("# Журнал приложения Mi Fitness " + versionText() + "\n");
-                w.write("# С " + sinceText + " (последние " + APP_LOG_MINUTES + " минут), процессов приложения: "
-                        + pids.size() + "\n");
-                w.write("# Токены, идентификаторы аккаунта и устройства, серийные номера, MAC, e-mail и телефоны "
-                        + "замаскированы. Отправляйте только в личные сообщения.\n\n");
+                w.write(header("последние " + APP_LOG_MINUTES + " минут, с " + sinceText, pids.size()));
                 r = LogLines.filter(in, w, pids, LogLines.MAX_CHARS);
             }
             final LogLines.Result res = r;
             main.post(() -> {
+                if (snapshot != null) {
+                    snapshot.setEnabled(true);
+                }
                 if (res.kept == 0) {
                     failed("За последние " + APP_LOG_MINUTES + " минут приложение ничего не записало в журнал. "
                             + "Повторите действие, с которым была ошибка, и откройте этот пункт снова.");

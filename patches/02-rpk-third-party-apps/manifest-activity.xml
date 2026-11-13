@@ -1,0 +1,1 @@
+<activity android:exported="false" android:name="com.markus.rpk.RpkInstallActivity" android:label="Сторонние приложения" android:theme="@android:style/Theme.Material.Light.DarkActionBar"/>
