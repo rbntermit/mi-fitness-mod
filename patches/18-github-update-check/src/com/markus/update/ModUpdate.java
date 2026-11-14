@@ -23,7 +23,7 @@ import javax.net.ssl.HttpsURLConnection;
  * Checks the mod's GitHub releases for a newer build. One GET of UpdateCheck.API_URL without a token,
  * cookies or anything about the phone or the account; at most once a day while "Проверять обновления" is on,
  * or by hand from Устройство -> Ещё -> Обновление мода. A newer build is only announced: "Скачать" opens the
- * release page in the browser; nothing is downloaded or installed by the app.
+ * a verified APK download screen; Android confirms installation. No firmware update is involved.
  */
 public final class ModUpdate {
     private static final String TAG = "MarkusModUpdate";
@@ -163,11 +163,19 @@ public final class ModUpdate {
         new AlertDialog.Builder(a)
                 .setTitle("Доступно обновление мода")
                 .setMessage(m)
-                .setPositiveButton("Скачать", (d, w) -> openPage(a, r.pageUrl))
+                .setPositiveButton(r.asset==null?"Страница релиза":"Скачать", (d, w) -> startDownload(a, r))
                 .setNegativeButton("Позже", null)
                 .show();
     }
 
+    static void startDownload(Context c,UpdateCheck.Result r) {
+        if(r.asset==null){openPage(c,r.pageUrl);return;}
+        UpdateAsset a=r.asset;
+        Intent i=new Intent(c,ModInstallActivity.class).putExtra("tag",a.version.tag()).putExtra("name",a.name)
+                .putExtra("url",a.url).putExtra("digest","sha256:"+a.sha256).putExtra("size",a.size);
+        if(!(c instanceof Activity))i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        c.startActivity(i);
+    }
     static void openPage(Context c, String url) {
         try {
             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));

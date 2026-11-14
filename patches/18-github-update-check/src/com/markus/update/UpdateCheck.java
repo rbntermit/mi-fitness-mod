@@ -2,7 +2,7 @@ package com.markus.update;
 
 /** What a check of the mod's GitHub releases means for the installed build. Pure logic, no Android. */
 final class UpdateCheck {
-    /** The only address the mod asks; no token, no query, nothing about the phone or the account. */
+    /** Metadata endpoint only; APK download uses the explicit GitHub release asset and validated GitHub CDN redirects. */
     static final String API_URL = "https://api.github.com/repos/rbntermit/mi-fitness-mod/releases/latest";
     static final String RELEASES_PAGE = "https://github.com/rbntermit/mi-fitness-mod/releases/";
     static final long DAY_MS = 24L * 60 * 60 * 1000;
@@ -17,8 +17,14 @@ final class UpdateCheck {
         final String title;
         final String body;
         final String pageUrl;
+        final UpdateAsset asset;
 
         Result(State state, ModVersion version, String title, String body, String pageUrl) {
+            this(state,version,title,body,pageUrl,null);
+        }
+
+        Result(State state,ModVersion version,String title,String body,String pageUrl,UpdateAsset asset) {
+            this.asset=asset;
             this.state = state;
             this.version = version;
             this.title = title;
@@ -61,7 +67,7 @@ final class UpdateCheck {
         if (!ModVersion.isNewer(v, installed)) {
             return new Result(State.UP_TO_DATE, v, null, null, null);
         }
-        return new Result(State.NEWER, v, r.name, shortBody(r.body), pageUrl(r.htmlUrl, v));
+        return new Result(State.NEWER, v, r.name, shortBody(r.body), pageUrl(r.htmlUrl, v), UpdateAsset.select(r));
     }
 
     /** Only a page of this repository's releases is ever opened; anything else falls back to the tag's page. */

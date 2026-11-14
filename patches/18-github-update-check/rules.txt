@@ -1,0 +1,13 @@
+# Only the permission explicitly approved for user-confirmed APK updates. Firmware OTA is untouched.
+RULE mod-update-install-permission
+FILE AndroidManifest.xml
+FIND (<application\b)
+REPLACE <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />$1
+COUNT 1
+
+# Reuse the existing non-exported provider, with a narrow private-files path for APKs.
+RULE mod-update-private-apk
+FILE res/xml/provider_paths.xml
+FIND </paths>
+REPLACE <files-path name="mod_updates" path="mod_updates/" /></paths>
+COUNT 1

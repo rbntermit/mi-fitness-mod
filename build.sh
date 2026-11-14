@@ -417,6 +417,9 @@ done
 [ $bad -eq 0 ] || die "a patch passes a parameter register that the method reused for another kind of value (VerifyError)"
 echo "   $nchecked added calls pass parameter registers of the expected kind"
 
+mkdir -p "$SRC/assets"
+printf 'v%s-band-%s\n' "$VERSION_NAME" "$BAND_BUILD" > "$SRC/assets/markus-mod-build.txt"
+
 log "Building"
 # Patched classes add method references; a dex already near the 65536 limit then overflows.
 # Like alpha-4 does, move the largest package of the overflowing dex into a dex of its own and retry.

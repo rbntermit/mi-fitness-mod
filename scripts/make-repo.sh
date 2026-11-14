@@ -18,4 +18,5 @@ for s in make_hooks.pl test_hooks.sh text_rules.pl ru_from.pl check_param_regs.a
 done
 cp "$ROOT/release/status.md" "$REPO/release/status.md"
 [ ! -f "$ROOT/RESEARCH_BAND5.md" ] || cp "$ROOT/RESEARCH_BAND5.md" "$REPO/"
+[ ! -f "$ROOT/UPDATE_BAND6.md" ] || cp "$ROOT/UPDATE_BAND6.md" "$REPO/"
 "$ROOT/scripts/check-repo.sh" "$REPO"

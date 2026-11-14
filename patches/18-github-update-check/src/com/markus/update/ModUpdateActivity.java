@@ -41,9 +41,9 @@ public final class ModUpdateActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView hint = new TextView(this);
-        hint.setText("Раз в сутки приложение смотрит страницу релизов мода на GitHub. Если там есть новая сборка, "
-                + "появится окно с кнопкой «Скачать» — она откроет страницу релиза в браузере. Само приложение ничего "
-                + "не скачивает и не устанавливает.");
+        hint.setText("Проверка новой сборки — раз в сутки или вручную. APK скачивается только по вашей кнопке, "
+                +"затем проверяются SHA-256, подпись и версия. Установку подтверждаете в системном окне Android. "
+                +"Обновление прошивки браслета выполняется отдельно.");
         root.addView(hint);
 
         checkNow = new Button(this);
@@ -63,7 +63,7 @@ public final class ModUpdateActivity extends Activity {
         download.setVisibility(android.view.View.GONE);
         download.setOnClickListener(v -> {
             if (last != null && last.pageUrl != null) {
-                ModUpdate.openPage(this, last.pageUrl);
+                ModUpdate.startDownload(this, last);
             }
         });
         root.addView(download);
@@ -88,6 +88,7 @@ public final class ModUpdateActivity extends Activity {
                 case NEWER:
                     status.setText("Доступна новая сборка: " + r.version.display()
                             + (r.body == null || r.body.isEmpty() ? "" : "\n\n" + r.body));
+                    download.setText(r.asset==null?"Страница релиза":"Скачать обновление");
                     download.setVisibility(android.view.View.VISIBLE);
                     break;
                 case UP_TO_DATE:

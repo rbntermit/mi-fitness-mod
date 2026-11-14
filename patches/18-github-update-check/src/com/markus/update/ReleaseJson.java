@@ -1,14 +1,27 @@
 package com.markus.update;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Reads the top-level string and boolean fields of the GitHub "latest release" answer
- * (tag_name, name, body, html_url, draft, prerelease). Nested objects and arrays (author, assets) are skipped.
+ * (tag_name, name, body, html_url, draft, prerelease). Release assets retain only their names, download addresses, sizes and SHA-256; other nested metadata is skipped.
  * A small strict reader instead of org.json, so that it is testable off the device. Pure logic.
  */
 final class ReleaseJson {
+    final List<Asset> assets;
+    static final class Asset {
+        final String name,url,digest,state;
+        final long size;
+        Asset(Map<String,Object> f) {
+            name=str(f.get("name"));url=str(f.get("browser_download_url"));
+            digest=str(f.get("digest"));state=str(f.get("state"));
+            size=f.get("size") instanceof Long?(Long)f.get("size"):-1;
+        }
+    }
     final String tag;
     final String name;
     final String body;
@@ -17,6 +30,14 @@ final class ReleaseJson {
     final boolean prerelease;
 
     private ReleaseJson(Map<String, Object> f) {
+        List<Asset> out=new ArrayList<>();
+        Object raw=f.get("assets");
+        if(raw instanceof List) {
+            for(Object item:(List<?>)raw) {
+                if(item instanceof Map) out.add(new Asset((Map<String,Object>)item));
+            }
+        }
+        assets=Collections.unmodifiableList(out);
         tag = str(f.get("tag_name"));
         name = str(f.get("name"));
         body = str(f.get("body"));
@@ -33,6 +54,8 @@ final class ReleaseJson {
         try {
             Reader r = new Reader(json);
             Map<String, Object> f = r.topObject();
+            r.ws();
+            if(r.i!=json.length()) throw new IllegalArgumentException("trailing JSON");
             return new ReleaseJson(f);
         } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
             return null;
@@ -67,7 +90,7 @@ final class ReleaseJson {
                 ws();
                 expect(':');
                 ws();
-                Object v = value(true);
+                Object v = "assets".equals(key) ? assetArray() : value(true);
                 if (v != null) {
                     out.put(key, v);
                 }
@@ -82,7 +105,7 @@ final class ReleaseJson {
             }
         }
 
-        /** Top-level strings and booleans are returned; everything else is read and dropped. */
+        /** Scalar strings, booleans and integer metadata are returned; other containers are skipped here. */
         private Object value(boolean keep) {
             char c = peek();
             if (c == '"') {
@@ -112,9 +135,21 @@ final class ReleaseJson {
             if (i == start) {
                 throw new IllegalArgumentException("value expected");
             }
-            return null;
+            return keep ? Long.valueOf(s.substring(start,i)) : null;
         }
 
+        private Object assetArray() {
+            if(peek()!='[') { value(false);return null; }
+            expect('[');if(++depth>64) throw new IllegalArgumentException("too deep");ws();
+            List<Map<String,Object>> out=new ArrayList<>();
+            if(peek()==']'){i++;depth--;return out;}
+            while(true) {
+                if(out.size()>=64) throw new IllegalArgumentException("too many assets");
+                out.add(topObject());ws();char c=next();
+                if(c==']'){depth--;return out;}
+                if(c!=',')throw new IllegalArgumentException("asset separator");ws();
+            }
+        }
         private void skipContainer() {
             char open = next();
             char close = open == '{' ? '}' : ']';
