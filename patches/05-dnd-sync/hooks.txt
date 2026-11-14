@@ -29,3 +29,16 @@ METHOD createSettingItems(I)V
 AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
 CODE
     invoke-static {v1, v6}, LMarkusZenSync;->insertSwitch(Landroidx/databinding/ObservableArrayList;I)V
+
+# Before Settings.setBoolean reuses p0 for Editor: capture only the DND key, other settings ignored.
+CLASS com/markus/Settings
+METHOD setBoolean(Ljava/lang/String;Z)V
+CODE
+    invoke-static {p0, p1}, LMarkusZenSync;->settingChanged(Ljava/lang/String;Z)V
+
+# The custom mode follows phone changes even if the band's native sync flag is false.
+# Reuse Xiaomi's existing observer; the worker still requires the explicit custom switch and a connected BLE band.
+CLASS com/xiaomi/fitness/devicesettings/utils/ZenUtils$contentObserver$1
+METHOD onChange(Z)V
+CODE
+    invoke-static {}, LMarkusZenSync;->onStockPath()V

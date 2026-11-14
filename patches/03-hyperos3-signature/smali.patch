@@ -43,20 +43,3 @@
  .end method
  
  .method public static declared-synchronized reget(Landroid/content/Context;)Lcom/xiaomi/passport/accountmanager/XiaomiAccountManager;
---- a/com/xiaomi/wearable/core/CoreExtKt.smali
-+++ b/com/xiaomi/wearable/core/CoreExtKt.smali
-@@ -1558,13 +1558,8 @@
-     .annotation build Lorg/jetbrains/annotations/NotNull;
-     .end annotation
- 
--    sget-object v0, Lcom/xiaomi/wearable/core/CoreExtKt;->targetServicePackage:Ljava/lang/String;
-+    const-string v0, "com.xiaomi.lyra"
- 
--    if-nez v0, :cond_0
--
--    const-string v0, "com.xiaomi.mi_connect_service"
--
--    :cond_0
-     return-object v0
- .end method
- 

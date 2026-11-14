@@ -1,0 +1,8 @@
+# Keep the original configured/default service for Wear OS and unknown devices.
+# A BLE device may use Lyra only when the target service is installed and accessible.
+CLASS com/xiaomi/wearable/core/CoreExtKt
+METHOD targetPackageName()Ljava/lang/String;
+AT before return-object v0
+CODE
+    invoke-static {v0}, Lcom/markus/facefix/WatchCompat;->corePackage(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v0

@@ -7,6 +7,12 @@ import androidx.databinding.ObservableArrayList;
 import com.markus.Settings;
 import com.markus.a;
 import com.markus.dnd.ZenSyncRules;
+import com.markus.dnd.SharedFlag;
+import com.markus.facefix.WatchCompat;
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import com.xiaomi.fitness.device.manager.DeviceManager;
 import com.xiaomi.fitness.device.manager.DeviceModel;
 import com.xiaomi.fitness.device.manager.export.DeviceManagerExtKt;
@@ -32,7 +38,30 @@ public final class MarkusZenSync {
     private static final String TAG = "MOD";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static volatile Boolean lastSent;
-    private static final Runnable RUN = MarkusZenSync::decideAndSend;
+    private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(r -> new Thread(r, "mod-dnd"));
+    private static final Runnable RUN = () -> WORKER.execute(MarkusZenSync::decideAndSend);
+    private static String lastDevice;
+
+    /** Settings.setBoolean hook: carry the choice to the device process and immediately refresh the phone state. */
+    public static void settingChanged(String key, boolean value) {
+        if (!KEY.equals(key)) return;
+        WORKER.execute(() -> {
+            try {
+                SharedFlag.write(flagFile(), value);
+                lastSent = null;
+                Log.i(TAG, "dnd: shared switch " + (value ? "on" : "off"));
+                decideAndSend();
+            } catch (IOException | RuntimeException e) {
+                Log.w(TAG, "dnd: switch could not be shared", e);
+            }
+        });
+    }
+
+    private static File flagFile() {
+        Context app = application();
+        if (app == null) throw new IllegalStateException("application unavailable");
+        return new File(app.getFilesDir(), "mod-simple-dnd.flag");
+    }
 
     private MarkusZenSync() {
     }
@@ -46,16 +75,20 @@ public final class MarkusZenSync {
     private static void decideAndSend() {
         boolean switchOn = switchOn();
         DeviceModel m = currentDevice();
+        boolean connected = m != null && m.isDeviceConnected();
+        String identity = connected ? m.getDid() : null;
+        if (identity == null || !identity.equals(lastDevice)) lastSent = null;
+        lastDevice = identity;
         boolean hasRuleSync = m != null && ZenSyncRules.hasRuleSync(capability(m));
         Boolean phone = phoneOn();
-        ZenSyncRules.Decision d = ZenSyncRules.decide(switchOn, m != null, hasRuleSync, phone, lastSent);
+        ZenSyncRules.Decision d = ZenSyncRules.decide(switchOn, connected && WatchCompat.localFaces(), hasRuleSync, phone, lastSent);
         switch (d) {
             case SEND_ON:
             case SEND_OFF:
                 boolean on = d == ZenSyncRules.Decision.SEND_ON;
                 if (send(on)) {
                     lastSent = on;
-                    Log.i(TAG, "dnd: simple sync sent phone DND " + (on ? "on" : "off") + " to the band");
+                    Log.i(TAG, "dnd: simple sync queued phone DND " + (on ? "on" : "off") + " to the band");
                 }
                 break;
             case SKIP_SWITCH_OFF:
@@ -107,8 +140,9 @@ public final class MarkusZenSync {
 
     private static boolean switchOn() {
         try {
-            return Settings.getBoolean(KEY, false);
-        } catch (RuntimeException e) {
+            return SharedFlag.read(flagFile(), Settings.getBoolean(KEY, false));
+        } catch (IOException | RuntimeException e) {
+            Log.w(TAG, "dnd: shared switch unreadable; disabled", e);
             return false;
         }
     }

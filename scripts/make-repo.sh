@@ -12,9 +12,10 @@ find "$REPO" -mindepth 1 -maxdepth 1 ! -name README.md ! -name .gitignore ! -nam
 cp -r "$ROOT/patches" "$REPO/patches"
 cp "$ROOT/build.sh" "$REPO/build.sh"
 mkdir -p "$REPO/scripts" "$REPO/release"
-for s in make_hooks.pl text_rules.pl ru_from.pl check_param_regs.awk TreeDiff.java phone-verify.sh logcap.sh check-repo.sh \
+for s in make_hooks.pl test_hooks.sh text_rules.pl ru_from.pl check_param_regs.awk TreeDiff.java phone-verify.sh logcap.sh check-repo.sh \
          make-repo.sh publish-release.sh; do
     cp "$ROOT/scripts/$s" "$REPO/scripts/$s"
 done
 cp "$ROOT/release/status.md" "$REPO/release/status.md"
+[ ! -f "$ROOT/RESEARCH_BAND5.md" ] || cp "$ROOT/RESEARCH_BAND5.md" "$REPO/"
 "$ROOT/scripts/check-repo.sh" "$REPO"

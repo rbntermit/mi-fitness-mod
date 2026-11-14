@@ -16,13 +16,14 @@
 # the method's own parameter registers past v15.
 use strict;
 use warnings;
+use File::Glob qw(bsd_glob);
 
 my ($src, $spec) = @ARGV;
 die "usage: $0 <app dir> <hooks.txt>\n" unless $src && $spec && -d $src && -f $spec;
 
 sub find_class {
     my ($cls) = @_;
-    my @f = grep { -f $_ } map { "$_/$cls.smali" } glob("$src/smali*");
+    my @f = grep { -f $_ } map { "$_/$cls.smali" } bsd_glob("$src/smali*");
     die "class $cls not found\n" unless @f == 1;
     return $f[0];
 }
@@ -124,7 +125,12 @@ for my $c (@order) {
 }
 chdir $tmp or die;
 for my $c (@order) {
-    my $out = `diff -u a/$c.smali b/$c.smali`;
+    # List-form exec preserves '$' in nested class names and spaces in paths; never pass them through a shell.
+    open my $df, '-|', 'diff', '-u', "a/$c.smali", "b/$c.smali" or die "cannot run diff: $!\n";
+    my $out = do { local $/; <$df> };
+    close $df;
+    my $status = $?;
+    die "diff failed for $c (status $status)\n" if $status != 0 && $status != 256;
     $out =~ s/^(---|\+\+\+) (\S+)\t.*$/$1 $2/mg;
     print $out;
 }
