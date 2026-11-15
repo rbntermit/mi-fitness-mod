@@ -40,6 +40,9 @@ TITLE="Mi Fitness $VERSION band-$N"
 APK_NAME="$(basename "$APK")"
 [ "$APK_NAME" = "MiFitness.$VERSION-band-$N.apk" ] || die "имя APK $APK_NAME не совпадает с версией и номером сборки"
 SHA="$(sha256sum "$APK" | cut -c1-64)"
+if unzip -Z1 "$APK" | grep -Fx 'assets/markus-experiment.txt' > /dev/null; then
+    die "experimental APK: not eligible for a public release"
+fi
 CERT="$("$JAVA" -jar "$BUILD_TOOLS/lib/apksigner.jar" verify --print-certs "$APK" \
     | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr -d '\r')"
 [ "$CERT" = "$CERT_SHA256" ] || die "подпись APK не наша: $CERT"

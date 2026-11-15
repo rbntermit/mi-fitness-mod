@@ -19,4 +19,5 @@ done
 cp "$ROOT/release/status.md" "$REPO/release/status.md"
 [ ! -f "$ROOT/RESEARCH_BAND5.md" ] || cp "$ROOT/RESEARCH_BAND5.md" "$REPO/"
 [ ! -f "$ROOT/UPDATE_BAND6.md" ] || cp "$ROOT/UPDATE_BAND6.md" "$REPO/"
+[ ! -f "$ROOT/RESEARCH_BAND7.md" ] || cp "$ROOT/RESEARCH_BAND7.md" "$REPO/"
 "$ROOT/scripts/check-repo.sh" "$REPO"

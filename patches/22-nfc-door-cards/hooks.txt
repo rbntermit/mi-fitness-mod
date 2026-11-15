@@ -1,0 +1,12 @@
+# Bound only the blocking UI; the original SDK read can still finish and publish the current result.
+CLASS com/xiaomi/fitness/nfc/ui/CardManagerActivity
+METHOD loadCardList()V
+AT before invoke-virtual \{v0, v1\}, Lcom/xiaomi/fitness/nfc/ui/CardManagerViewModel;->loadCardList
+CODE
+    invoke-static {p0, v1}, Lcom/markus/nfc/NfcLoadingGuard;->wrap(Lcom/xiaomi/fitness/baseui/view/BaseActivity;Lkotlin/jvm/functions/Function3;)Lkotlin/jvm/functions/Function3;
+    move-result-object v1
+
+CLASS com/xiaomi/fitness/nfc/ui/CardManagerActivity
+METHOD onDestroy()V
+CODE
+    invoke-static {p0}, Lcom/markus/nfc/NfcLoadingGuard;->close(Lcom/xiaomi/fitness/baseui/view/BaseActivity;)V

@@ -1,0 +1,12 @@
+# Local experiment only, excluded unless RECORDER_EXPERIMENT=1.
+# Advertise the phone capability; do not alter the real HyperOS/provider check or recording import paths.
+CLASS com/mi/fitness/capability/CapabilityManagerImpl
+METHOD isSupportRecorderSync()Lcom/mi/fitness/capability/export/model/CapabilityModel;
+CODE
+    const-string v0, "MOD"
+    const-string v1, "recorder: experiment advertises phone capability 0x40000; system Recorder integration stays stock"
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    new-instance v0, Lcom/mi/fitness/capability/export/model/CapabilityModel;
+    const/high16 v1, 0x40000
+    invoke-direct {v0, v1}, Lcom/mi/fitness/capability/export/model/CapabilityModel;-><init>(I)V
+    return-object v0

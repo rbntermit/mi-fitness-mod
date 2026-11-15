@@ -40,6 +40,9 @@ D8_JAR="$BUILD_TOOLS/lib/d8.jar"
 JUNIT="$TOOLS/junit-console.jar"
 SAMPLES="${SAMPLES:-$ROOT/samples/firmware}"
 FIRMWARE_INSTALL="${FIRMWARE_INSTALL:-1}"
+# Explicit local experiment only; ordinary builds never advertise an unverified recorder capability.
+RECORDER_EXPERIMENT="${RECORDER_EXPERIMENT:-0}"
+case "$RECORDER_EXPERIMENT" in 0|1) ;; *) die "RECORDER_EXPERIMENT must be 0 or 1" ;; esac
 # Build number of the mod for this app version: release tag v<versionName>-band-<BAND_BUILD>
 BAND_BUILD="${BAND_BUILD:-1}"
 # Temporary Russian for a bundle without the ru split: RU_FROM=<version in archive/> takes values-ru of that
@@ -67,6 +70,7 @@ PATCHES=()
 for p in "$ROOT"/patches/*/; do
     p="${p%/}"
     [ "$FIRMWARE_INSTALL" = "0" ] && [ "$(basename "$p")" = "12-firmware-install" ] && continue
+    [ "$RECORDER_EXPERIMENT" = "0" ] && [ "$(basename "$p")" = "23-recorder-experiment" ] && continue
     # a parked or renamed patch file would be skipped silently; refuse to build instead
     for f in "$p"/smali.patch?*; do
         [ -e "$f" ] && die "$(basename "$p"): unused patch file $(basename "$f"); rename it to smali.patch or remove it"
@@ -419,6 +423,9 @@ echo "   $nchecked added calls pass parameter registers of the expected kind"
 
 mkdir -p "$SRC/assets"
 printf 'v%s-band-%s\n' "$VERSION_NAME" "$BAND_BUILD" > "$SRC/assets/markus-mod-build.txt"
+if [ "$RECORDER_EXPERIMENT" = "1" ]; then
+    printf 'recorder-capability\n' > "$SRC/assets/markus-experiment.txt"
+fi
 
 log "Building"
 # Patched classes add method references; a dex already near the 65536 limit then overflows.

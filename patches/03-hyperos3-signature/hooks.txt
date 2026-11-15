@@ -1,8 +1,7 @@
-# Keep the original configured/default service for Wear OS and unknown devices.
-# A BLE device may use Lyra only when the target service is installed and accessible.
+# Restore band-4 remote binding: service choice happens before the current product is known.
+# Wear OS face interception remains guarded independently in patch 01.
 CLASS com/xiaomi/wearable/core/CoreExtKt
 METHOD targetPackageName()Ljava/lang/String;
 AT before return-object v0
 CODE
-    invoke-static {v0}, Lcom/markus/facefix/WatchCompat;->corePackage(Ljava/lang/String;)Ljava/lang/String;
-    move-result-object v0
+    const-string v0, "com.xiaomi.lyra"
