@@ -21,7 +21,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 /**
  * Checks the mod's GitHub releases for a newer build. One GET of UpdateCheck.API_URL without a token,
- * cookies or anything about the phone or the account; at most once a day while "Проверять обновления" is on,
+ * cookies or anything about the phone or the account; at most once in six hours while "Проверять обновления" is on,
  * or by hand from Устройство -> Ещё -> Обновление мода. A newer build is only announced: "Скачать" opens the
  * a verified APK download screen; Android confirms installation. No firmware update is involved.
  */
@@ -44,7 +44,7 @@ public final class ModUpdate {
     private ModUpdate() {
     }
 
-    /** MainActivity.onResume (start): the daily automatic check. Never throws. */
+    /** MainActivity.onResume (start): the automatic check on resume. Never throws. */
     public static void onMainResume(Activity activity) {
         try {
             SharedPreferences p = prefs(activity);
@@ -96,7 +96,7 @@ public final class ModUpdate {
             } catch (Throwable t) {
                 r = UpdateCheck.Result.of(UpdateCheck.State.FAILED);
             }
-            // every attempt counts, also a failed one: no more than one request a day even offline or rate-limited
+            // every attempt counts, also a failed one: no more than one automatic request in six hours even offline or rate-limited
             prefs(app).edit().putLong(KEY_LAST, System.currentTimeMillis()).apply();
             Log.i(TAG, "check: " + r.state);
             final UpdateCheck.Result res = r;

@@ -10,7 +10,7 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 
-/** Устройство -> Ещё -> Обновление мода: installed build, the daily-check switch, a manual check. */
+/** Устройство -> Ещё -> Обновление мода: installed build, the automatic-check switch, a manual check. */
 public final class ModUpdateActivity extends Activity {
     private TextView status;
     private Button checkNow;
@@ -41,7 +41,7 @@ public final class ModUpdateActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView hint = new TextView(this);
-        hint.setText("Проверка новой сборки — раз в сутки или вручную. APK скачивается только по вашей кнопке, "
+        hint.setText("Проверка при открытии приложения — раз в 6 часов или вручную. APK скачивается только по вашей кнопке, "
                 +"затем проверяются SHA-256, подпись и версия. Установку подтверждаете в системном окне Android. "
                 +"Обновление прошивки браслета выполняется отдельно.");
         root.addView(hint);

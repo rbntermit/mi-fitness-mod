@@ -95,20 +95,21 @@ class UpdateCheckTest {
     // --- schedule and switch
 
     @Test
-    void checkAtMostOnceADay() {
-        long now = 10 * UpdateCheck.DAY_MS;
+    void checkAtMostOnceInSixHours() {
+        long now = 1_700_000_000_000L;
         assertTrue(UpdateCheck.due(true, 0, now));
         assertFalse(UpdateCheck.due(true, now - 60_000, now));
-        assertFalse(UpdateCheck.due(true, now - UpdateCheck.DAY_MS + 1, now));
-        assertTrue(UpdateCheck.due(true, now - UpdateCheck.DAY_MS, now));
+        assertFalse(UpdateCheck.due(true, now - 6L * 60 * 60 * 1000 + 1, now));
+        assertTrue(UpdateCheck.due(true, now - 6L * 60 * 60 * 1000, now));
+        assertTrue(UpdateCheck.due(true, now - 12L * 60 * 60 * 1000, now)); // previous daily schedule must not delay the upgrade
         assertTrue(UpdateCheck.due(true, now + 60_000, now)); // clock set back
     }
 
     @Test
     void switchedOffNeverChecks() {
-        long now = 10 * UpdateCheck.DAY_MS;
+        long now = 1_700_000_000_000L;
         assertFalse(UpdateCheck.due(false, 0, now));
-        assertFalse(UpdateCheck.due(false, now - 5 * UpdateCheck.DAY_MS, now));
+        assertFalse(UpdateCheck.due(false, now - 24L * 60 * 60 * 1000, now));
     }
 
     @Test

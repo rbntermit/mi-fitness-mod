@@ -12,6 +12,8 @@ public final class WatchCompat {
     private WatchCompat() {}
     private static volatile Integer knownType;
     private static String wearState;
+    private static Boolean peerPresent;
+    private static Boolean watchPresent;
     public static boolean localFaces() {
         try {
             DeviceModel m = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion).getCurrentDeviceModel();
@@ -40,8 +42,8 @@ public final class WatchCompat {
         String state = "api unavailable";
         try {
             if (api != null) {
-                Object stream = api.getClass().getMethod("getPairedWatches").invoke(api);
-                Object result = stream.getClass().getMethod("getCurrentValue").invoke(stream);
+                Object stream = Class.forName("com.google.android.libraries.wear.companion.watch.WatchApi").getMethod("getPairedWatches").invoke(api);
+                Object result = Class.forName("com.google.android.libraries.wear.common.stream.ValueStream").getMethod("getCurrentValue").invoke(stream);
                 state = "paired watches pending";
                 if (result != null) {
                     Object value = result.getClass().getMethod("unbox-impl").invoke(result);
@@ -56,11 +58,26 @@ public final class WatchCompat {
                 }
             }
         } catch (ReflectiveOperationException | RuntimeException e) {
-            state = "paired watches diagnostics unavailable";
+            state = "paired watches diagnostics unavailable: " + e.getClass().getSimpleName();
         }
         if (!state.equals(wearState)) {
             wearState = state;
             android.util.Log.i("MOD", "wear: " + state);
+        }
+    }
+    /** Log presence only, never the peer id. Missing ids used to return before all diagnostics. */
+    public static synchronized void noteWearLookup(String peerId) {
+        boolean present = peerId != null && !peerId.isEmpty();
+        if (peerPresent == null || peerPresent.booleanValue() != present) {
+            peerPresent = present;
+            android.util.Log.i("MOD", present ? "wear: peer id present" : "wear: peer id missing");
+        }
+    }
+    public static synchronized void noteWearResult(Object watch) {
+        boolean present = watch != null;
+        if (watchPresent == null || watchPresent.booleanValue() != present) {
+            watchPresent = present;
+            android.util.Log.i("MOD", present ? "wear: watch lookup available" : "wear: watch lookup missing");
         }
     }
 }

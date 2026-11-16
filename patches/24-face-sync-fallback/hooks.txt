@@ -1,0 +1,30 @@
+# Only the BLE current-face read (4/7), not Wear OS or health data.
+# The affected firmware rejects this optional read with code 1 while the full face list (4/0) succeeds.
+# Retry using the stock list synchronizer; a failed retry still reaches the original onSyncError path.
+CLASS com/xiaomi/fitness/watch/face/export/FaceSyncerImpl$syncDataInner$2
+METHOD onError(Ljava/lang/String;II)V
+TEMPS 6
+CODE
+    const/4 v0, 0x1
+    if-ne p3, v0, :markus_current_face_error_stock
+    if-eqz p1, :markus_current_face_error_stock
+    const-string v0, "MOD"
+    const-string v1, "face sync: current-face read rejected (1); retrying full list"
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    iget-object v0, p0, Lcom/xiaomi/fitness/watch/face/export/FaceSyncerImpl$syncDataInner$2;->this$0:Lcom/xiaomi/fitness/watch/face/export/FaceSyncerImpl;
+    move-object v1, p1
+    iget-object v2, p0, Lcom/xiaomi/fitness/watch/face/export/FaceSyncerImpl$syncDataInner$2;->$callBack:Lcom/xiaomi/fitness/device/contact/export/DeviceSyncCallback;
+    const/4 v3, 0x0
+    const/4 v4, 0x0
+    const/4 v5, 0x0
+    new-array v5, v5, [Leyt;
+    invoke-static/range {v0 .. v5}, Lcom/xiaomi/fitness/watch/face/export/FaceSyncerImpl;->access$syncBleFace(Lcom/xiaomi/fitness/watch/face/export/FaceSyncerImpl;Ljava/lang/String;Lcom/xiaomi/fitness/device/contact/export/DeviceSyncCallback;ZI[Leyt;)V
+    return-void
+    :markus_current_face_error_stock
+
+# The retry can span several pages. Use the accumulated list for both the callback and cache.
+CLASS com/xiaomi/fitness/watch/face/export/FaceSyncerImpl$syncBleFace$1
+METHOD onSuccess(Ljava/lang/String;ILcom/xiaomi/fitness/device/contact/export/SyncResult;)V
+AT before invoke-interface \{v1, p1, v2, p3\}, Lcom/xiaomi/fitness/device/contact/export/DeviceSyncCallback;->onSyncSuccess
+CODE
+    move-object p3, v5

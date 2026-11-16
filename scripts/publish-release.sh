@@ -38,7 +38,7 @@ fi
 VERSION="$("$AAPT2" dump badging "$APK" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)"
 [ -n "$VERSION" ] || die "не прочитать versionName из $APK"
 TAG="v$VERSION-band-$N"
-TITLE="Mi Fitness $VERSION band-$N"
+TITLE="Mi Fitness Mod $VERSION — сборка $N"
 APK_NAME="$(basename "$APK")"
 APK_SIZE="$(stat -c %s "$APK")"
 [ "$APK_NAME" = "MiFitness.$VERSION-band-$N.apk" ] || die "имя APK $APK_NAME не совпадает с версией и номером сборки"

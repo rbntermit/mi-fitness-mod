@@ -1,0 +1,17 @@
+# A re-signed app can lack ACCESS_NOTE. Do not turn the denied provider query into an empty device list.
+# Guard only automatic merge; explicitly turning sync off retains the stock clear-list behaviour.
+CLASS com/xiaomi/fitness/devicesettings/bluttooth/todo/miui/MiuiTodoSyncDeviceManager
+METHOD mergeAndSyncMiuiTodoList(Ljava/util/List;)V
+TEMPS 2
+CODE
+    invoke-static {}, Lcom/xiaomi/fitness/common/extensions/ApplicationExtKt;->getApplication()Landroid/app/Application;
+    move-result-object v0
+    const-string v1, "com.miui.notes.permission.ACCESS_NOTE"
+    invoke-virtual {v0, v1}, Landroid/content/Context;->checkSelfPermission(Ljava/lang/String;)I
+    move-result v0
+    if-eqz v0, :markus_todo_access_allowed
+    const-string v0, "MOD"
+    const-string v1, "todo sync: notes permission unavailable; merge skipped without replacing device tasks"
+    invoke-static {v0, v1}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;)I
+    return-void
+    :markus_todo_access_allowed

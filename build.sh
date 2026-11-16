@@ -553,7 +553,7 @@ CUR="$WORK/build-manifest.tsv"
 } > "$CUR"
 desc() { sed -n "s/^| $1 | \(.*\) |\$/\1/p" "$ROOT/patches/README.md" | head -1; }
 {
-    echo "# Mi Fitness $VERSION_NAME — мод, сборка $BAND_BUILD ($TAG)"
+    echo "# Mi Fitness Mod $VERSION_NAME — сборка $BAND_BUILD ($TAG)"
     echo
     echo "Неофициальная модификация Mi Fitness (com.xiaomi.wearable). Установка поверх возможна только на сборку"
     echo "с той же подписью; с официального приложения нужно удалить его (данные на телефоне пропадут)."

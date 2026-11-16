@@ -5,7 +5,7 @@ final class UpdateCheck {
     /** Metadata endpoint only; APK download uses the explicit GitHub release asset and validated GitHub CDN redirects. */
     static final String API_URL = "https://api.github.com/repos/rbntermit/mi-fitness-mod/releases/latest";
     static final String RELEASES_PAGE = "https://github.com/rbntermit/mi-fitness-mod/releases/";
-    static final long DAY_MS = 24L * 60 * 60 * 1000;
+    static final long AUTO_INTERVAL_MS = 6L * 60 * 60 * 1000;
     /** The release text shown in the dialog is cut to this many characters. */
     static final int BODY_MAX = 1500;
 
@@ -40,9 +40,9 @@ final class UpdateCheck {
     private UpdateCheck() {
     }
 
-    /** Automatic check: switched on and at most once a day (a clock set back counts as due). */
+    /** Automatic check: switched on and at most once in six hours on resume (a clock set back counts as due). */
     static boolean due(boolean enabled, long lastCheck, long now) {
-        return enabled && (lastCheck <= 0 || now - lastCheck >= DAY_MS || now < lastCheck);
+        return enabled && (lastCheck <= 0 || now - lastCheck >= AUTO_INTERVAL_MS || now < lastCheck);
     }
 
     /**
