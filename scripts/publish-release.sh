@@ -15,6 +15,8 @@ BUILD_TOOLS="${BUILD_TOOLS:-$(ls -d "$ANDROID_SDK"/build-tools/* | sort -V | tai
 JAVA="$JAVA_HOME/bin/java"; [ -x "$JAVA" ] || JAVA="$JAVA_HOME/bin/java.exe"
 AAPT2="$BUILD_TOOLS/aapt2"; [ -x "$AAPT2" ] || AAPT2="$BUILD_TOOLS/aapt2.exe"
 NOTES="$ROOT/out/release-notes.md"
+# Set to 0 on slow links: require the server SHA-256 and a successful public download HEAD instead.
+VERIFY_DOWNLOAD="${VERIFY_DOWNLOAD:-1}"
 
 die() { echo "ОШИБКА: $*" >&2; exit 1; }
 ok() { echo "  ✓ $*"; }
@@ -38,6 +40,7 @@ VERSION="$("$AAPT2" dump badging "$APK" | sed -n "s/.*versionName='\([^']*\)'.*/
 TAG="v$VERSION-band-$N"
 TITLE="Mi Fitness $VERSION band-$N"
 APK_NAME="$(basename "$APK")"
+APK_SIZE="$(stat -c %s "$APK")"
 [ "$APK_NAME" = "MiFitness.$VERSION-band-$N.apk" ] || die "имя APK $APK_NAME не совпадает с версией и номером сборки"
 SHA="$(sha256sum "$APK" | cut -c1-64)"
 if unzip -Z1 "$APK" | grep -Fx 'assets/markus-experiment.txt' > /dev/null; then
@@ -106,18 +109,26 @@ curl -fsSL -A "mi-fitness-mod-publish" "https://api.github.com/repos/$REPO_SLUG/
 NODE="${NODE:-$ROOT/tools/node/node.exe}"; [ -x "$NODE" ] || NODE="$(command -v node || true)"
 [ -n "$NODE" ] || die "нужен node (tools/node), чтобы прочитать ответ api.github.com"
 # prints: tag, draft, prerelease, download url of the APK
-read -r LATEST_TAG DRAFT PRE URL < <("$NODE" -e '
+read -r LATEST_TAG DRAFT PRE URL DIGEST SIZE < <("$NODE" -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const a = (j.assets || []).find(x => x.name === process.argv[2]);
-    console.log([j.tag_name, j.draft, j.prerelease, a ? a.browser_download_url : "-"].join(" "));
+    console.log([j.tag_name, j.draft, j.prerelease, a ? a.browser_download_url : "-", a && a.digest ? a.digest : "-", a ? a.size : 0].join(" "));
 ' "$(cygpath -w "$TMP/latest.json" 2>/dev/null || echo "$TMP/latest.json")" "$APK_NAME")
 [ "$LATEST_TAG" = "$TAG" ] || die "latest на GitHub — $LATEST_TAG, а не $TAG"
 [ "$DRAFT" = "false" ] || die "релиз — черновик"
 [ "$PRE" = "false" ] || die "релиз отмечен как pre-release"
 [ "$URL" != "-" ] || URL=""
 [ -n "$URL" ] || die "в релизе нет файла $APK_NAME"
-curl -fsSL -A "mi-fitness-mod-publish" -o "$TMP/$APK_NAME" "$URL" || die "файл не скачивается: $URL"
-GOT="$(sha256sum "$TMP/$APK_NAME" | cut -c1-64)"
-[ "$GOT" = "$SHA" ] || die "скачанный файл отличается: $GOT"
-ok "latest на GitHub — $TAG; файл скачивается, SHA-256 совпадает"
+[ "$SIZE" = "$APK_SIZE" ] || die "размер файла на GitHub отличается: $SIZE"
+if [ "$VERIFY_DOWNLOAD" = "0" ]; then
+    [ "$DIGEST" = "sha256:$SHA" ] || die "SHA-256 на GitHub отсутствует или отличается: $DIGEST"
+    curl -fIsSL --max-time 60 -A "mi-fitness-mod-publish" "$URL" > "$TMP/download.headers" \
+        || die "публичный адрес скачивания не отвечает: $URL"
+    ok "latest на GitHub — $TAG; размер и серверный SHA-256 совпадают; адрес скачивания доступен"
+else
+    curl -fsSL -A "mi-fitness-mod-publish" -o "$TMP/$APK_NAME" "$URL" || die "файл не скачивается: $URL"
+    GOT="$(sha256sum "$TMP/$APK_NAME" | cut -c1-64)"
+    [ "$GOT" = "$SHA" ] || die "скачанный файл отличается: $GOT"
+    ok "latest на GitHub — $TAG; файл скачивается, SHA-256 совпадает"
+fi
 echo "https://github.com/$REPO_SLUG/releases/tag/$TAG"

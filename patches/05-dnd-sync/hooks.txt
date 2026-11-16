@@ -16,7 +16,7 @@ CODE
     invoke-static {v3, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
 
 # no band, or the band does not report zen rule sync: the stock path decides (it relies on MIUI on the phone);
-# «Простая синхронизация „Не беспокоить“» (MarkusZenSync, off by default) may send the rule anyway, with MOD lines
+# «Простая синхронизация „Не беспокоить“» (MarkusZenSync, off by default) uses the stock legacy 2/23 command, with callback diagnostics
 CLASS com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSyncHelper
 METHOD trySyncManualZenRule()Z
 AT after ^\s*:cond_0$

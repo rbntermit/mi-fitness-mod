@@ -7,6 +7,7 @@ import androidx.databinding.ObservableArrayList;
 import com.markus.Settings;
 import com.markus.a;
 import com.markus.dnd.ZenSyncRules;
+import com.markus.dnd.ZenSyncDelivery;
 import com.markus.dnd.SharedFlag;
 import com.markus.facefix.WatchCompat;
 import java.io.File;
@@ -17,38 +18,26 @@ import com.xiaomi.fitness.device.manager.DeviceManager;
 import com.xiaomi.fitness.device.manager.DeviceModel;
 import com.xiaomi.fitness.device.manager.export.DeviceManagerExtKt;
 import com.xiaomi.fitness.device.manager.export.WearableDeviceManager;
-import com.xiaomi.fitness.devicesettings.common.zenmode.ZenModeSyncHelper;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
+import com.xiaomi.fitness.device.contact.export.OnSyncCallback;
+import com.xiaomi.fitness.device.contact.export.SyncResult;
 
-/**
- * «Простая синхронизация „Не беспокоить“» (off by default) for bands that do not report zen rule sync (capability
- * bit 4, e.g. Band 10 by the owner's log): when the phone's DND changes, the band gets the same one rule
- * manual_zen_rule that patch 05 sends to bands with the bit. It is the only phone -> band DND command in 3.60
- * (ZenUtils.postSetZenMode goes the other way: it sets the phone's DND from the band). Debounced, only changes,
- * only phone -> band, so it cannot loop. Unnamed package because the rule class (njr) lives there.
- *
- * Called from ZenModeSyncHelper.trySyncManualZenRule when it takes the stock path (hooks.txt).
- */
+/** Opt-in phone -> BLE band DND using the stock legacy command for bands without zen-rule support. */
 public final class MarkusZenSync {
     static final String KEY = "simple_zen_sync";
     static final int TYPE_MOD_SETTINGS = 0x7000;
     private static final long DEBOUNCE_MS = 1500;
     private static final String TAG = "MOD";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static volatile Boolean lastSent;
+    private static final ZenSyncDelivery DELIVERY = new ZenSyncDelivery();
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(r -> new Thread(r, "mod-dnd"));
     private static final Runnable RUN = () -> WORKER.execute(MarkusZenSync::decideAndSend);
-    private static String lastDevice;
 
-    /** Settings.setBoolean hook: carry the choice to the device process and immediately refresh the phone state. */
     public static void settingChanged(String key, boolean value) {
         if (!KEY.equals(key)) return;
         WORKER.execute(() -> {
             try {
                 SharedFlag.write(flagFile(), value);
-                lastSent = null;
+                DELIVERY.reset();
                 Log.i(TAG, "dnd: shared switch " + (value ? "on" : "off"));
                 decideAndSend();
             } catch (IOException | RuntimeException e) {
@@ -63,10 +52,8 @@ public final class MarkusZenSync {
         return new File(app.getFilesDir(), "mod-simple-dnd.flag");
     }
 
-    private MarkusZenSync() {
-    }
+    private MarkusZenSync() {}
 
-    /** trySyncManualZenRule took the stock path (no band, or no capability bit 4). */
     public static void onStockPath() {
         MAIN.removeCallbacks(RUN);
         MAIN.postDelayed(RUN, DEBOUNCE_MS);
@@ -74,66 +61,74 @@ public final class MarkusZenSync {
 
     private static void decideAndSend() {
         boolean switchOn = switchOn();
-        DeviceModel m = currentDevice();
-        boolean connected = m != null && m.isDeviceConnected();
-        String identity = connected ? m.getDid() : null;
-        if (identity == null || !identity.equals(lastDevice)) lastSent = null;
-        lastDevice = identity;
-        boolean hasRuleSync = m != null && ZenSyncRules.hasRuleSync(capability(m));
+        DeviceModel model = currentDevice();
+        boolean connected = model != null && model.isDeviceConnected();
+        String identity = connected ? model.getDid() : null;
+        DELIVERY.selectDevice(identity);
+        boolean hasRuleSync = model != null && ZenSyncRules.hasRuleSync(capability(model));
         Boolean phone = phoneOn();
-        ZenSyncRules.Decision d = ZenSyncRules.decide(switchOn, connected && WatchCompat.localFaces(), hasRuleSync, phone, lastSent);
-        switch (d) {
+        ZenSyncRules.Decision decision = ZenSyncRules.decide(switchOn,
+                connected && identity != null && WatchCompat.localFaces(), hasRuleSync, phone, DELIVERY.acknowledged());
+        switch (decision) {
             case SEND_ON:
             case SEND_OFF:
-                boolean on = d == ZenSyncRules.Decision.SEND_ON;
-                if (send(on)) {
-                    lastSent = on;
-                    Log.i(TAG, "dnd: simple sync queued phone DND " + (on ? "on" : "off") + " to the band");
+                boolean on = decision == ZenSyncRules.Decision.SEND_ON;
+                if (DELIVERY.isPending(on)) {
+                    Log.i(TAG, "dnd: legacy command pending");
+                    return;
                 }
+                send(identity, on);
                 break;
             case SKIP_SWITCH_OFF:
-                Log.i(TAG, "dnd: band without zen rule sync, simple sync is off (switch)");
+            case SKIP_HAS_RULE_SYNC:
+            case SKIP_NO_BAND:
+                DELIVERY.reset();
+                Log.i(TAG, "dnd: simple sync skipped: " + decision);
                 break;
             default:
-                Log.i(TAG, "dnd: simple sync skipped: " + d);
+                Log.i(TAG, "dnd: simple sync skipped: " + decision);
                 break;
         }
     }
 
-    private static boolean send(boolean on) {
+    private static void send(String identity, boolean on) {
+        long ticket = DELIVERY.begin(on);
         try {
-            njr rule = new njr();
-            rule.a = true;
-            rule.b = "manual_zen_rule";
-            rule.c = on ? 1 : 0;
-            rule.e = (int) System.currentTimeMillis();
-            List<Object> rules = new ArrayList<>();
-            rules.add(rule);
-            // the same private sender patch 05 calls for bands with the bit
-            Method m = ZenModeSyncHelper.class.getDeclaredMethod("syncZenRule", List.class);
-            m.setAccessible(true);
-            m.invoke(ZenModeSyncHelper.INSTANCE, rules);
-            return true;
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            Log.w(TAG, "dnd: simple sync not sent", e);
-            return false;
+            MarkusLegacyZenSender.send(identity, LegacyZenRequest.create(on), new OnSyncCallback() {
+                @Override public void onSuccess(String ignored, int type, SyncResult result) {
+                    WORKER.execute(() -> finish(identity, ticket, true, type, 0));
+                }
+                @Override public void onError(String ignored, int type, int error) {
+                    WORKER.execute(() -> finish(identity, ticket, false, type, error));
+                }
+            });
+            Log.i(TAG, "dnd: legacy 2/23 queued, phone DND " + (on ? "on" : "off"));
+        } catch (RuntimeException e) {
+            DELIVERY.complete(ticket, false);
+            Log.w(TAG, "dnd: legacy command not queued", e);
         }
     }
 
-    /** DeviceSettingListViewModel.createSettingItems, after com.markus.a.insertSubMenus: the switch row. */
+    private static void finish(String identity, long ticket, boolean success, int type, int error) {
+        if (!DELIVERY.complete(ticket, success)) return;
+        DeviceModel current = currentDevice();
+        if (!switchOn() || current == null || !current.isDeviceConnected() || !identity.equals(current.getDid())) {
+            DELIVERY.reset();
+            Log.i(TAG, "dnd: legacy callback ignored after switch/device change");
+            return;
+        }
+        // Transport acknowledgement alone does not prove the band's visible DND mode changed.
+        if (success) Log.i(TAG, "dnd: legacy transport acknowledged, type " + type);
+        else Log.w(TAG, "dnd: legacy transport error, type " + type + ", code " + error);
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static void insertSwitch(ObservableArrayList list, int type) {
-        if (type != TYPE_MOD_SETTINGS || list == null) {
-            return;
-        }
-        DeviceModel m = currentDevice();
-        if (!ZenSyncRules.offerSwitch(m != null, m != null && ZenSyncRules.hasRuleSync(capability(m)))) {
-            return;
-        }
+        if (type != TYPE_MOD_SETTINGS || list == null) return;
+        DeviceModel model = currentDevice();
+        if (!ZenSyncRules.offerSwitch(model != null, model != null && ZenSyncRules.hasRuleSync(capability(model)))) return;
         Context app = application();
-        if (app == null) {
-            return;
-        }
+        if (app == null) return;
         list.add(a.createSwitchRow(app, 0, "device_tab_setting_icon_health", "markus_simple_zen_sync",
                 "markus_simple_zen_sync_summary", KEY));
     }
@@ -149,17 +144,18 @@ public final class MarkusZenSync {
 
     private static DeviceModel currentDevice() {
         try {
-            DeviceManager dm = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion);
-            return dm == null ? null : dm.getCurrentDeviceModel();
+            DeviceManager manager = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion);
+            return manager == null ? null : manager.getCurrentDeviceModel();
         } catch (RuntimeException e) {
             return null;
         }
     }
 
-    private static long capability(DeviceModel m) {
+    private static long capability(DeviceModel model) {
         try {
-            DeviceManager dm = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion);
-            return dm instanceof WearableDeviceManager ? ((WearableDeviceManager) dm).getDeviceCapabilityV3(m.getDid()) : 0;
+            DeviceManager manager = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion);
+            return manager instanceof WearableDeviceManager
+                    ? ((WearableDeviceManager) manager).getDeviceCapabilityV3(model.getDid()) : 0;
         } catch (RuntimeException e) {
             return 0;
         }
@@ -167,11 +163,10 @@ public final class MarkusZenSync {
 
     private static Boolean phoneOn() {
         Context app = application();
-        NotificationManager nm = app == null ? null : (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
-        return nm == null ? null : ZenSyncRules.phoneOn(nm.getCurrentInterruptionFilter());
+        NotificationManager manager = app == null ? null : (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
+        return manager == null ? null : ZenSyncRules.phoneOn(manager.getCurrentInterruptionFilter());
     }
 
-    /** ActivityThread.currentApplication() is not in the public SDK; the mod's own menu code uses it the same way. */
     private static Context application() {
         try {
             return (Context) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
