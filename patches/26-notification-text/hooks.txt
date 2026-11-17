@@ -1,0 +1,30 @@
+# Refresh the two shared flags on Xiaomi's existing notification HandlerThread.
+# Strip before supportEmoji can map Unicode emoji into private-use glyphs. v1 is the service.
+CLASS com/xiaomi/fitness/notify/BaseNotifySyncService
+METHOD handleNotificationPosted(Landroid/service/notification/StatusBarNotification;)V
+AT after ^\s*:cond_13$
+CODE
+    invoke-static {v1}, Lcom/markus/notify/NotificationText;->refresh(Landroid/content/Context;)V
+    invoke-static {v14}, Lcom/markus/notify/NotificationText;->beforeEmojiMapping(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v14
+    invoke-static {v5}, Lcom/markus/notify/NotificationText;->beforeEmojiMapping(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v5
+
+# Format final title/body and MessagingStyle text; both BLE and Huami take this list.
+CLASS com/xiaomi/fitness/notify/BaseNotifySyncService
+METHOD postNotifications()V
+TEMPS 1
+CODE
+    iget-object v0, p0, Lcom/xiaomi/fitness/notify/BaseNotifySyncService;->mFinalSendNotificationList:Ljava/util/List;
+    invoke-static {v0}, LMarkusNotificationText;->beforeSend(Ljava/util/List;)V
+
+CLASS com/xiaomi/fitness/device/manager/ui/tab/DeviceSettingListViewModel
+METHOD createSettingItems(I)V
+AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
+CODE
+    invoke-static {v1, v6}, Lcom/markus/notify/NotificationText;->insertSwitches(Landroidx/databinding/ObservableArrayList;I)V
+
+CLASS com/markus/Settings
+METHOD setBoolean(Ljava/lang/String;Z)V
+CODE
+    invoke-static {p0, p1}, Lcom/markus/notify/NotificationText;->settingChanged(Ljava/lang/String;Z)V

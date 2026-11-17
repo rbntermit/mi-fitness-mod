@@ -1,0 +1,4 @@
+    <string name="markus_notification_no_emoji">Notifications without emoji</string>
+    <string name="markus_notification_no_emoji_summary">Remove emoji from notification titles and text sent to the wearable. Off by default.</string>
+    <string name="markus_notification_uppercase">Uppercase notifications</string>
+    <string name="markus_notification_uppercase_summary">Send notification titles and text in UPPERCASE. Off by default.</string>

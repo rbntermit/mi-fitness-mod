@@ -87,8 +87,8 @@ echo "  название: $TITLE"
 echo "  файл:     $APK_NAME"
 echo "  SHA-256:  $SHA"
 echo "  отметка:  latest, не pre-release, не черновик"
-echo "  изменения относительно прошлой сборки:"
-sed -n '/^## Изменения относительно прошлой сборки/,/^## /p' "$NOTES" | grep '^- ' | cut -c1-200 | sed 's/^/    /'
+echo "  описание релиза:"
+sed -n '1,24p' "$NOTES" | sed 's/^/    /'
 
 if [ "$YES" -ne 1 ]; then
     echo

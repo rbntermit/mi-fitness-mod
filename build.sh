@@ -49,6 +49,9 @@ BAND_BUILD="${BAND_BUILD:-1}"
 # version (only names, formats and tags that still fit; scripts/ru_from.pl). Leave empty for a bundle with Russian.
 RU_FROM="${RU_FROM:-}"
 case "$BAND_BUILD" in ""|*[!0-9]*) echo "ERROR: BAND_BUILD must be a number" >&2; exit 1 ;; esac
+if [ "${1:-}" != "--tests-only" ] && [ ! -f "$ROOT/release/notes-band-$BAND_BUILD.md" ]; then
+    die "public release description missing for build $BAND_BUILD"
+fi
 
 for t in "$JAVA" "$JAVAC" "$JAR" "$KEYTOOL" "$ZIPALIGN" "$BUILD_TOOLS/lib/apksigner.jar" "$TOOLS/apktool.jar" \
          "$TOOLS/APKEditor.jar" "$ANDROID_JAR" "$D8_JAR" "$JUNIT"; do
@@ -551,60 +554,9 @@ CUR="$WORK/build-manifest.tsv"
             "$(cd "$p" && find . -type f | LC_ALL=C sort | xargs sha1sum | sha1sum | cut -c1-12)"
     done
 } > "$CUR"
-desc() { sed -n "s/^| $1 | \(.*\) |\$/\1/p" "$ROOT/patches/README.md" | head -1; }
-{
-    echo "# Mi Fitness Mod $VERSION_NAME — сборка $BAND_BUILD ($TAG)"
-    echo
-    echo "Неофициальная модификация Mi Fitness (com.xiaomi.wearable). Установка поверх возможна только на сборку"
-    echo "с той же подписью; с официального приложения нужно удалить его (данные на телефоне пропадут)."
-    echo
-    echo "## Важно"
-    echo
-    sections="$(for m in $(sed -n 's/^bundle://p' "$WORK/bundles.touched" 2>/dev/null | sort -u); do
-        case "$m" in mine) echo "«Профиль»";; sport) echo "«Тренировка»";; health) echo "«Здоровье» (с «Сном»)";; *) echo "«$m»";; esac
-    done | paste -sd, - | sed 's/,/, /g')"
-    if [ -n "$sections" ]; then
-        echo "- Разделы $sections берутся из APK и **не обновляются с сервера Xiaomi**: иначе скрытые"
-        echo "  элементы вернутся. Новые функции этих разделов появятся только с новой сборкой мода."
-    fi
-    [ -d "$ROOT/patches/19-phone-steps-off" ] && \
-        echo "- Переключатель «Не учитывать шаги телефона» работает **только на телефонах Xiaomi** (MIUI/HyperOS): на других телефонах Mi Fitness шаги телефона и так не берёт."
-    if [ -n "$RU_FROM" ]; then
-        echo "- В пакете $VERSION_NAME нет русского языка; перевод взят из $RU_FROM: $(sed -n '1s/^Перенесено: //p' "$WORK/ru-from.txt"). Новые для $VERSION_NAME строки — на английском ($(sed -n 's/^Осталось на английском[^:]*: //p' "$WORK/ru-from.txt"))."
-    fi
-    echo
-    echo "## Изменения относительно оригинального приложения"
-    echo
-    for p in "${PATCHES[@]}"; do
-        n="$(basename "$p")"; d="$(desc "$n")"
-        echo "- **$n** — ${d:-описание в patches/README.md}"
-    done
-    echo
-    echo "## Изменения относительно прошлой сборки"
-    echo
-    LAST="$OUT_DIR/.last-build.tsv"
-    if [ ! -f "$LAST" ]; then
-        echo "- Первая сборка: сравнивать не с чем."
-    else
-        lastapp="$(awk -F'\t' '$1=="app"{print $2}' "$LAST")"
-        [ "$lastapp" = "$VERSION_NAME" ] || echo "- Приложение обновлено: $lastapp → $VERSION_NAME."
-        awk -F'\t' 'FNR==NR && $1=="patch" {old[$2]=$3; next}
-                    $1=="patch" { if (!($2 in old)) print "- Новый патч: **" $2 "**."
-                                  else if (old[$2] != $3) print "- Изменён патч: **" $2 "**."
-                                  seen[$2]=1 }
-                    END { for (k in old) if (!(k in seen)) print "- Убран патч: **" k "**." }' "$LAST" "$CUR"
-        cmp -s <(grep '^patch' "$LAST") <(grep '^patch' "$CUR") && echo "- Патчи не менялись."
-    fi
-    echo
-    echo "## Проверено и не проверено"
-    echo
-    if [ -f "$ROOT/release/status.md" ]; then cat "$ROOT/release/status.md"; else echo "- Нет данных (release/status.md)."; fi
-    echo
-    echo "## Файл"
-    echo
-    echo "- \`$(basename "$OUT")\`, SHA-256 \`$(sha256sum "$OUT" | cut -c1-64)\`"
-    echo "- Сертификат подписи SHA-256 \`$("${APKSIGNER[@]}" verify --print-certs "$OUT" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)\`"
-} > "$NOTES"
+# Release text is curated separately; never append private verification or research reports.
+CERT_DIGEST="$("${APKSIGNER[@]}" verify --print-certs "$OUT" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr -d '\r')"
+bash "$ROOT/scripts/release_notes.sh" "$VERSION_NAME" "$BAND_BUILD" "$OUT" "$NOTES" "$CERT_DIGEST"
 cp "$CUR" "$OUT_DIR/.last-build.tsv"
 echo "   $NOTES"
 

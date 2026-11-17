@@ -16,7 +16,8 @@ while IFS= read -r f; do report "$f"; done < <(cd "$DIR" && find . -path ./.git 
     -o -iname 'keystore.properties' -o -iname 'local.properties' \
     -o -iname '*.apk' -o -iname '*.apks' -o -iname '*.xapk' -o -iname '*.apkm' -o -iname '*.idsig' \
     -o -iname '*.bin' -o -iname '*.fw' -o -iname '*.ota' -o -iname 'miwear_product.json' \
-    -o -iname '*.log' -o -iname '*.hprof' \) -print | sort)
+    -o -iname '*.log' -o -iname '*.hprof' \
+    -o -iname 'RESEARCH_*.md' -o -iname 'UPDATE_BAND*.md' -o -iname '*FINDINGS.md' -o -iname 'MENU_PROPOSAL.md' \) -print | sort)
 # by folder
 while IFS= read -r d; do report "$d/"; done < <(cd "$DIR" && find . -path ./.git -prune -o -type d \( -name keys -o -name logs \
     -o -name samples -o -name target -o -name 'target-*' -o -name out -o -name work -o -name archive \
