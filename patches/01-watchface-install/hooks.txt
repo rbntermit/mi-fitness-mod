@@ -39,7 +39,7 @@ CLASS com/xiaomi/fitness/wearos/export/WearOsManagerImpl
 METHOD getWearosWatch(Ljava/lang/String;)Lcom/google/android/libraries/wear/companion/watch/Watch;
 AT after move-result-object v2
 CODE
-    invoke-static {v2}, Lcom/markus/facefix/WatchCompat;->noteWearState(Ljava/lang/Object;)V
+    invoke-static {v2, p1}, Lcom/markus/facefix/WatchCompat;->noteWearState(Ljava/lang/Object;Ljava/lang/String;)V
 
 # Diagnose empty peer ids and a missing Watch without exposing identifiers.
 CLASS com/xiaomi/fitness/wearos/export/WearOsManagerImpl

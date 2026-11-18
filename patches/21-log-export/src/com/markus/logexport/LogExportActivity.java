@@ -318,12 +318,14 @@ public class LogExportActivity extends Activity {
         java.lang.Process p = null;
         try {
             File out = new File(exportDir(), "mi-fitness-app-log-" + stamp() + ".txt");
+            String wearSnapshot = com.markus.facefix.WatchCompat.logSnapshot();
             // without READ_LOGS logcat shows only this app's lines; the pid filter keeps exactly its processes
             p = new ProcessBuilder("logcat", "-d", "-v", "threadtime", "-T", sinceText).redirectErrorStream(true).start();
             LogLines.Result r;
             try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
                     Writer w = new OutputStreamWriter(new FileOutputStream(out), StandardCharsets.UTF_8)) {
                 w.write(header("последние " + APP_LOG_MINUTES + " минут, с " + sinceText, pids.size()));
+                w.write("# Диагностика Wear OS на момент сохранения: " + wearSnapshot + "\n");
                 r = LogLines.filter(in, w, pids, LogLines.MAX_CHARS);
             }
             final LogLines.Result res = r;
@@ -332,8 +334,8 @@ public class LogExportActivity extends Activity {
                     snapshot.setEnabled(true);
                 }
                 if (res.kept == 0) {
-                    failed("За последние " + APP_LOG_MINUTES + " минут приложение ничего не записало в журнал. "
-                            + "Повторите действие, с которым была ошибка, и откройте этот пункт снова.");
+                    ready(out, "Сохранено текущее состояние Wear OS. Строк logcat за последние "
+                            + APP_LOG_MINUTES + " минут нет. Чтобы записать ошибку, используйте «Начать запись».");
                 } else {
                     ready(out, "Готово: " + res.kept + " строк за последние " + APP_LOG_MINUTES + " минут, "
                             + kb(out.length()) + (res.truncated ? " (журнал обрезан по размеру)" : "") + ".");

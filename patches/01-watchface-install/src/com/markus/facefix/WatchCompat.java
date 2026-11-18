@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import com.xiaomi.fitness.device.manager.DeviceModel;
+import com.xiaomi.fitness.device.manager.bean.DeviceInfo;
 import com.xiaomi.fitness.device.manager.export.DeviceManagerExtKt;
 import com.xiaomi.fitness.device.manager.export.WearableDeviceManager;
 
@@ -11,9 +12,10 @@ import com.xiaomi.fitness.device.manager.export.WearableDeviceManager;
 public final class WatchCompat {
     private WatchCompat() {}
     private static volatile Integer knownType;
-    private static String wearState;
-    private static Boolean peerPresent;
-    private static Boolean watchPresent;
+    private static final WearDiagnostics.RepeatGate wearState = new WearDiagnostics.RepeatGate();
+    private static final WearDiagnostics.RepeatGate peerState = new WearDiagnostics.RepeatGate();
+    private static final WearDiagnostics.RepeatGate watchState = new WearDiagnostics.RepeatGate();
+
     public static boolean localFaces() {
         try {
             DeviceModel m = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion).getCurrentDeviceModel();
@@ -37,47 +39,43 @@ public final class WatchCompat {
             return stock;
         }
     }
-    /** No peer ids or addresses. Distinguishes a missing SDK, pending initialization, SDK failure and empty pairing. */
-    public static synchronized void noteWearState(Object api) {
-        String state = "api unavailable";
-        try {
-            if (api != null) {
-                Object stream = Class.forName("com.google.android.libraries.wear.companion.watch.WatchApi").getMethod("getPairedWatches").invoke(api);
-                Object result = Class.forName("com.google.android.libraries.wear.common.stream.ValueStream").getMethod("getCurrentValue").invoke(stream);
-                state = "paired watches pending";
-                if (result != null) {
-                    Object value = result.getClass().getMethod("unbox-impl").invoke(result);
-                    Object error = result.getClass().getMethod("errorOrNull-impl", Object.class).invoke(null, value);
-                    if (error != null) {
-                        state = "paired watches SDK error";
-                        if (error instanceof Enum) state += " " + ((Enum<?>) error).name();
-                    } else {
-                        state = value instanceof java.util.List ? "paired watches count=" + ((java.util.List<?>) value).size()
-                                : "paired watches result available";
-                    }
-                }
-            }
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            state = "paired watches diagnostics unavailable: " + e.getClass().getSimpleName();
+
+    /** Called on the log worker. The returned snapshot is written directly into the export, not only logcat. */
+    public static String logSnapshot() {
+        synchronized (WatchCompat.class) {
+            wearState.reset();
+            peerState.reset();
+            watchState.reset();
         }
-        if (!state.equals(wearState)) {
-            wearState = state;
+        try {
+            DeviceModel model = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion).getCurrentDeviceModel();
+            if (model == null || model.getProduct() == null) return "wear: device=unavailable";
+            if (model.getProduct().getType() != 1) return "wear: device=not_wear_os";
+            DeviceInfo info = model.getDeviceInfo();
+            String peerId = info == null ? null : info.getNodeID();
+            return "wear: " + WearDiagnostics.describe(WearDiagnostics.currentApi(), peerId);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            return "wear: " + WearDiagnostics.failure(e);
+        }
+    }
+
+    /** Reads only the existing SDK cache and compares ids internally; no connection or pairing operation. */
+    public static synchronized void noteWearState(Object api, String peerId) {
+        String state = WearDiagnostics.describe(api, peerId);
+        if (wearState.take(state, android.os.SystemClock.elapsedRealtime())) {
             android.util.Log.i("MOD", "wear: " + state);
         }
     }
-    /** Log presence only, never the peer id. Missing ids used to return before all diagnostics. */
     public static synchronized void noteWearLookup(String peerId) {
-        boolean present = peerId != null && !peerId.isEmpty();
-        if (peerPresent == null || peerPresent.booleanValue() != present) {
-            peerPresent = present;
-            android.util.Log.i("MOD", present ? "wear: peer id present" : "wear: peer id missing");
+        String state = peerId == null || peerId.isEmpty() ? "peer id missing" : "peer id present";
+        if (peerState.take(state, android.os.SystemClock.elapsedRealtime())) {
+            android.util.Log.i("MOD", "wear: " + state);
         }
     }
     public static synchronized void noteWearResult(Object watch) {
-        boolean present = watch != null;
-        if (watchPresent == null || watchPresent.booleanValue() != present) {
-            watchPresent = present;
-            android.util.Log.i("MOD", present ? "wear: watch lookup available" : "wear: watch lookup missing");
+        String state = watch == null ? "watch lookup missing" : "watch lookup available";
+        if (watchState.take(state, android.os.SystemClock.elapsedRealtime())) {
+            android.util.Log.i("MOD", "wear: " + state);
         }
     }
 }

@@ -96,6 +96,8 @@ public final class LogRecorder {
         long written = 0;
         try (Writer w = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
             w.write(header.replace("@PERIOD@", "запись с " + startText));
+            // Persist a fresh cache snapshot even if the same SDK state was logged before recording began.
+            w.write("# Диагностика Wear OS на начало записи: " + com.markus.facefix.WatchCompat.logSnapshot() + "\n");
             // -T: from now on, without the old buffer; the stream ends when the process is destroyed
             proc = new ProcessBuilder("logcat", "-v", "threadtime", "-T", startText).redirectErrorStream(true).start();
             try (BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
