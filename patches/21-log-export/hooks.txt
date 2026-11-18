@@ -18,3 +18,37 @@ METHOD createSettingItems(I)V
 AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
 CODE
     invoke-static {v1, v6}, Lcom/markus/logexport/LogExport;->insertMenu(Landroidx/databinding/ObservableArrayList;I)V
+
+# A terminal Google terms failure leaves the original setup screen waiting indefinitely.
+CLASS com/xiaomi/fitness/wearos/ui/fragment/termsofservice/TermsOfServiceFragment
+METHOD termsOfServiceStatusObserver$lambda$0(Lcom/xiaomi/fitness/wearos/ui/fragment/termsofservice/TermsOfServiceFragment;Lcom/google/android/libraries/wear/companion/setup/TermsOfServiceSetupStep$Status;)V
+AT after invoke-static \{v0\}, Lc3u;->b\(Ljava/lang/String;\)V
+CODE
+    instance-of v0, p1, Lcom/google/android/libraries/wear/companion/setup/TermsOfServiceSetupStep$Status$Failed;
+    if-eqz v0, :markus_terms_keep_observing
+    invoke-virtual {p0}, Lcom/xiaomi/fitness/baseui/view/BaseFragment;->getMActivity()Landroidx/fragment/app/FragmentActivity;
+    move-result-object v0
+    invoke-virtual {p0}, Lcom/xiaomi/fitness/wearos/ui/fragment/termsofservice/TermsOfServiceFragment;->getSetupNavigator()Lcom/xiaomi/fitness/wearos/utils/SetupNavigator;
+    move-result-object v1
+    invoke-static {v0, v1}, Lcom/markus/logexport/WearSetupFailure;->show(Landroid/app/Activity;Lcom/xiaomi/fitness/wearos/utils/SetupNavigator;)V
+    :markus_terms_keep_observing
+
+# Numeric Activity result only. Do not read the returned Intent extras.
+CLASS com/google/android/gms/internal/wear_companion/zzhsu
+METHOD zzr(Landroidx/activity/ComponentActivity;Lcom/google/android/gms/internal/wear_companion/zzhsu;Landroidx/activity/result/ActivityResult;)V
+AT before const/4 p2, -0x1
+CODE
+    invoke-static {p0}, Lcom/markus/logexport/WearSetupFailure;->noteActivityResult(I)V
+
+CLASS com/google/android/gms/internal/wear_companion/zzhsu
+METHOD zzw(Lcom/google/android/gms/internal/wear_companion/zzhsu;Lcom/google/android/libraries/wear/companion/init/configuration/StyleConfiguration;Landroidx/activity/ComponentActivity;Lv0x;)V
+AT after move-exception v0
+CODE
+    invoke-static {}, Lcom/markus/logexport/WearSetupFailure;->noteLaunchUnavailable()V
+
+# Error in the SDK's consent check after returning from the Google Activity.
+CLASS com/google/android/gms/internal/wear_companion/zzhst
+METHOD invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
+AT after check-cast p1, Ljava/lang/Exception;
+CODE
+    invoke-static {p1}, Lcom/markus/logexport/WearSetupFailure;->noteConsentFailure(Ljava/lang/Exception;)V

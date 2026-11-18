@@ -43,11 +43,15 @@ public final class LogExport {
                 new Function1<Context, Unit>() {
                     @Override
                     public Unit invoke(Context context) {
-                        start(context, new Intent(context, LogExportActivity.class)
-                                .putExtra(LogExportActivity.EXTRA_MODE, LogExportActivity.MODE_APP));
+                        openAppLog(context);
                         return Unit.INSTANCE;
                     }
                 }));
+    }
+
+    static void openAppLog(Context context) {
+        start(context, new Intent(context, LogExportActivity.class)
+                .putExtra(LogExportActivity.EXTRA_MODE, LogExportActivity.MODE_APP));
     }
 
     private static void start(Context context, Intent i) {
