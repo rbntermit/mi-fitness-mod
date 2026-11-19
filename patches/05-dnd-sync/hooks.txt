@@ -42,3 +42,18 @@ CLASS com/xiaomi/fitness/devicesettings/utils/ZenUtils$contentObserver$1
 METHOD onChange(Z)V
 CODE
     invoke-static {}, LMarkusZenSync;->onStockPath()V
+
+# Register the public Android filter broadcast alongside Xiaomi's observers in the device process.
+CLASS com/xiaomi/fitness/devicesettings/DeviceSettingsComponent
+METHOD initDeviceDataHandler()V
+AT before sget-object v1, Lcom/xiaomi/fitness/account/manager/AccountManager;->Companion:
+CODE
+    invoke-static {}, LMarkusZenSync;->registerFilterReceiver()V
+
+# p1 is true after the native switch is successfully enabled and it requests immediate sync.
+# Loading the current switch state on screen creation passes false.
+CLASS com/xiaomi/fitness/devicesettings/common/zenmode/ZenModeSettingFragment
+METHOD onZenModeOpen(Z)V
+AT before if-eqz p1, :cond_0
+CODE
+    invoke-static {p1}, LMarkusZenSync;->nativeSyncEnabled(Z)V

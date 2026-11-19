@@ -1,5 +1,9 @@
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -31,6 +35,48 @@ public final class MarkusZenSync {
     private static final ZenSyncDelivery DELIVERY = new ZenSyncDelivery();
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(r -> new Thread(r, "mod-dnd"));
     private static final Runnable RUN = () -> WORKER.execute(MarkusZenSync::decideAndSend);
+    private static boolean filterReceiverRegistered;
+
+    public static synchronized void registerFilterReceiver() {
+        if (filterReceiverRegistered) return;
+        Context app = application();
+        if (app == null) return;
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                if (!NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED.equals(intent.getAction())) return;
+                WORKER.execute(() -> {
+                    if (!switchOn()) return;
+                    Log.i(TAG, "dnd: Android interruption filter changed");
+                    onStockPath();
+                });
+            }
+        };
+        IntentFilter filter = new IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED);
+        try {
+            // The Android system broadcasts this action. The receiver lives with the device process.
+            if (Build.VERSION.SDK_INT >= 33) {
+                app.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                app.registerReceiver(receiver, filter);
+            }
+            filterReceiverRegistered = true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "dnd: Android filter receiver unavailable, type " + e.getClass().getSimpleName());
+        }
+    }
+
+    public static void nativeSyncEnabled(boolean enabled) {
+        if (!enabled) return;
+        WORKER.execute(() -> {
+            if (!switchOn()) return;
+            DeviceModel model = currentDevice();
+            if (model == null || !WatchCompat.localFaces() || ZenSyncRules.hasRuleSync(capability(model))) return;
+            // The device's sync flag just changed. A prior successful write cannot describe its new state.
+            DELIVERY.reset();
+            Log.i(TAG, "dnd: native sync enabled; reapplying phone mode");
+            onStockPath();
+        });
+    }
 
     public static void settingChanged(String key, boolean value) {
         if (!KEY.equals(key)) return;
@@ -66,7 +112,8 @@ public final class MarkusZenSync {
         String identity = connected ? model.getDid() : null;
         DELIVERY.selectDevice(identity);
         boolean hasRuleSync = model != null && ZenSyncRules.hasRuleSync(capability(model));
-        Boolean phone = phoneOn();
+        int filter = phoneFilter();
+        Boolean phone = ZenSyncRules.phoneOn(filter);
         ZenSyncRules.Decision decision = ZenSyncRules.decide(switchOn,
                 connected && identity != null && WatchCompat.localFaces(), hasRuleSync, phone, DELIVERY.acknowledged());
         switch (decision) {
@@ -86,7 +133,7 @@ public final class MarkusZenSync {
                 Log.i(TAG, "dnd: simple sync skipped: " + decision);
                 break;
             default:
-                Log.i(TAG, "dnd: simple sync skipped: " + decision);
+                Log.i(TAG, "dnd: simple sync skipped: " + decision + ", phone filter " + filter);
                 break;
         }
     }
@@ -161,10 +208,10 @@ public final class MarkusZenSync {
         }
     }
 
-    private static Boolean phoneOn() {
+    private static int phoneFilter() {
         Context app = application();
         NotificationManager manager = app == null ? null : (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
-        return manager == null ? null : ZenSyncRules.phoneOn(manager.getCurrentInterruptionFilter());
+        return manager == null ? NotificationManager.INTERRUPTION_FILTER_UNKNOWN : manager.getCurrentInterruptionFilter();
     }
 
     private static Context application() {
