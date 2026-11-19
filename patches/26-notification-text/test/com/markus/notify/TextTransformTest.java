@@ -75,6 +75,7 @@ class TextTransformTest {
     @Test void optionsAreSeparateStableKeys() {
         assertTrue(NotificationText.isOption("notification_no_emoji"));
         assertTrue(NotificationText.isOption("notification_uppercase"));
+        assertTrue(NotificationText.isOption("notification_pause_on_phone_dnd"));
         assertFalse(NotificationText.isOption("simple_zen_sync"));
         assertFalse(NotificationText.isOption(null));
     }

@@ -2,3 +2,5 @@
     <string name="markus_notification_no_emoji_summary">Удалять emoji из заголовков и текста уведомлений на браслете. По умолчанию выключено.</string>
     <string name="markus_notification_uppercase">Уведомления в верхнем регистре</string>
     <string name="markus_notification_uppercase_summary">Показывать заголовки и текст уведомлений на браслете ЗАГЛАВНЫМИ БУКВАМИ. По умолчанию выключено.</string>
+    <string name="markus_notification_pause_dnd">Не пересылать уведомления при «Не беспокоить»</string>
+    <string name="markus_notification_pause_dnd_summary">Пока на телефоне включён режим «Не беспокоить», новые уведомления приложений остаются на телефоне и позднее не пересылаются.</string>

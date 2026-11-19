@@ -10,6 +10,18 @@ CODE
     invoke-static {v5}, Lcom/markus/notify/NotificationText;->beforeEmojiMapping(Ljava/lang/String;)Ljava/lang/String;
     move-result-object v5
 
+# The WeChat call flag is set before goto_4. Pause app notifications before either Focus or standard delivery.
+CLASS com/xiaomi/fitness/notify/BaseNotifySyncService
+METHOD handleNotificationPosted(Landroid/service/notification/StatusBarNotification;)V
+AT after ^\s*:goto_4$
+CODE
+    iget-boolean v3, v0, Lexi;->n:Z
+    invoke-static {v1, v2, v3}, Lcom/markus/notify/NotificationText;->shouldPause(Landroid/content/Context;Landroid/service/notification/StatusBarNotification;Z)Z
+    move-result v3
+    if-eqz v3, :markus_notification_forward
+    return-void
+    :markus_notification_forward
+
 # Format final title/body and MessagingStyle text; both BLE and Huami take this list.
 CLASS com/xiaomi/fitness/notify/BaseNotifySyncService
 METHOD postNotifications()V
