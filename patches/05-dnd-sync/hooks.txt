@@ -35,6 +35,7 @@ CLASS com/markus/Settings
 METHOD setBoolean(Ljava/lang/String;Z)V
 CODE
     invoke-static {p0, p1}, LMarkusZenSync;->settingChanged(Ljava/lang/String;Z)V
+    invoke-static {p0, p1}, LMarkusAodSync;->settingChanged(Ljava/lang/String;Z)V
 
 # The custom mode follows phone changes even if the band's native sync flag is false.
 # Reuse Xiaomi's existing observer; the worker still requires the explicit custom switch and a connected BLE band.
@@ -49,6 +50,7 @@ METHOD initDeviceDataHandler()V
 AT before sget-object v1, Lcom/xiaomi/fitness/account/manager/AccountManager;->Companion:
 CODE
     invoke-static {}, LMarkusZenSync;->registerFilterReceiver()V
+    invoke-static {}, LMarkusAodSync;->register()V
 
 # p1 is true after the native switch is successfully enabled and it requests immediate sync.
 # Loading the current switch state on screen creation passes false.
@@ -57,3 +59,14 @@ METHOD onZenModeOpen(Z)V
 AT before if-eqz p1, :cond_0
 CODE
     invoke-static {p1}, LMarkusZenSync;->nativeSyncEnabled(Z)V
+
+# The long-lived listener receives each successful connection and disconnect in the device process.
+CLASS com/xiaomi/fitness/devicesettings/DeviceSettingsComponent$initDeviceDataHandler$1
+METHOD onConnectSuccess(Ljava/lang/String;)V
+CODE
+    invoke-static {}, LMarkusAodSync;->connectionChanged()V
+
+CLASS com/xiaomi/fitness/devicesettings/DeviceSettingsComponent$initDeviceDataHandler$1
+METHOD onDisconnect(Ljava/lang/String;)V
+CODE
+    invoke-static {}, LMarkusAodSync;->connectionChanged()V

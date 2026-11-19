@@ -44,6 +44,7 @@ public final class MarkusZenSync {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
                 if (!NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED.equals(intent.getAction())) return;
+                MarkusAodSync.onEvent();
                 WORKER.execute(() -> {
                     if (!switchOn()) return;
                     Log.i(TAG, "dnd: Android interruption filter changed");
@@ -189,7 +190,7 @@ public final class MarkusZenSync {
         }
     }
 
-    private static DeviceModel currentDevice() {
+    static DeviceModel currentDevice() {
         try {
             DeviceManager manager = DeviceManagerExtKt.getInstance(WearableDeviceManager.Companion);
             return manager == null ? null : manager.getCurrentDeviceModel();
@@ -208,13 +209,13 @@ public final class MarkusZenSync {
         }
     }
 
-    private static int phoneFilter() {
+    static int phoneFilter() {
         Context app = application();
         NotificationManager manager = app == null ? null : (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
         return manager == null ? NotificationManager.INTERRUPTION_FILTER_UNKNOWN : manager.getCurrentInterruptionFilter();
     }
 
-    private static Context application() {
+    static Context application() {
         try {
             return (Context) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
         } catch (ReflectiveOperationException e) {

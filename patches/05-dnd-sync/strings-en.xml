@@ -1,2 +1,4 @@
 <string name="markus_simple_zen_sync">Simple Do Not Disturb sync</string>
 <string name="markus_simple_zen_sync_summary">For bands without rule sync: turning Do Not Disturb on or off on the phone is sent to the band</string>
+<string name="markus_pause_aod_dnd">Turn off Always-on display during Do Not Disturb</string>
+<string name="markus_pause_aod_dnd_summary">Pause Always-on display while Do Not Disturb is on for the phone. Restore the previous mode and schedule afterward.</string>

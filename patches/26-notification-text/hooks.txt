@@ -35,6 +35,7 @@ METHOD createSettingItems(I)V
 AT after invoke-static \{v1, v6\}, Lcom/markus/a;->insertSubMenus
 CODE
     invoke-static {v1, v6}, Lcom/markus/notify/NotificationText;->insertSwitches(Landroidx/databinding/ObservableArrayList;I)V
+    invoke-static {v1, v6}, LMarkusAodSync;->insertSwitch(Landroidx/databinding/ObservableArrayList;I)V
 
 CLASS com/markus/Settings
 METHOD setBoolean(Ljava/lang/String;Z)V
