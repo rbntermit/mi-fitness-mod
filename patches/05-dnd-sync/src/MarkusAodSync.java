@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import androidx.databinding.ObservableArrayList;
 import com.markus.Settings;
@@ -14,6 +16,7 @@ import com.xiaomi.fitness.device.contact.export.OnSyncCallback;
 import com.xiaomi.fitness.device.contact.export.SyncResult;
 import com.xiaomi.fitness.device.manager.DeviceModel;
 import com.xiaomi.fitness.device.manager.bean.DeviceInfo;
+import com.xiaomi.fitness.device.manager.export.bean.TabContentSwitchItem;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +34,7 @@ public final class MarkusAodSync {
     private static final String TAG = "MOD";
     private static final ScheduledExecutorService WORKER =
             Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "mod-aod-dnd"));
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static volatile Context owner;
     // Device-process worker only, including transport callbacks.
     private static ScheduledFuture<?> scheduled;
@@ -78,11 +82,24 @@ public final class MarkusAodSync {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static void insertSwitch(ObservableArrayList list, int type) {
-        if (type != MarkusZenSync.TYPE_MOD_SETTINGS || list == null || !supported(MarkusZenSync.currentDevice())) return;
+        if (type != MarkusZenSync.TYPE_MOD_SETTINGS || list == null) return;
+        DeviceModel model = MarkusZenSync.currentDevice();
+        if (!supported(model)) return;
         Context app = MarkusZenSync.application();
         if (app == null) return;
-        list.add(a.createSwitchRow(app, 0, "device_tab_setting_icon_system", "markus_pause_aod_dnd",
-                "markus_pause_aod_dnd_summary", KEY));
+        TabContentSwitchItem row = a.createSwitchRow(app, 0, "device_tab_setting_icon_system", "markus_pause_aod_dnd",
+                "markus_pause_aod_dnd_summary", KEY);
+        list.add(row);
+        WORKER.execute(() -> {
+            try {
+                File state = readStatus(app, model, model.getDid());
+                if (!AodReadStatus.blocksProbe(state, false)) return;
+                int message = app.getResources().getIdentifier("markus_pause_aod_dnd_unavailable", "string", app.getPackageName());
+                if (message != 0) MAIN.post(() -> row.setSubtitle(app.getString(message)));
+            } catch (IOException | RuntimeException e) {
+                Log.w(TAG, "aod dnd: saved read status unavailable");
+            }
+        });
     }
 
     public static void onEvent() {
@@ -113,10 +130,11 @@ public final class MarkusAodSync {
         }
         reconcileAgain = false;
         try {
-            String identity = connectedBand();
+            DeviceModel model = MarkusZenSync.currentDevice();
+            String identity = connectedBand(model);
             if (identity == null) return;
-            Attempt attempt = new Attempt(identity, preferences());
-            if (desiredPause(attempt) == null) return;
+            Attempt attempt = new Attempt(identity, preferences(), readStatus(owner, model, identity));
+            if (desiredPause(attempt) == null || AodReadStatus.blocksProbe(attempt.readStatus, attempt.saved() != null)) return;
             active = attempt;
             attempt.timeout = WORKER.schedule(() -> fail(attempt, "request timed out"), 30, TimeUnit.SECONDS);
             read(attempt, result -> decide(attempt, result));
@@ -165,8 +183,17 @@ public final class MarkusAodSync {
     }
 
     private static void read(Attempt attempt, ResultHandler handler) {
-        send(attempt, AodRequest.read(), response -> handler.accept(AodRequest.decode(
-                MarkusLegacyZenSender.aodResponse(response))));
+        send(attempt, AodRequest.read(), response -> {
+            AodSetting observed = AodRequest.decode(MarkusLegacyZenSender.aodResponse(response));
+            if (observed != null) {
+                try {
+                    AodReadStatus.record(attempt.readStatus, 0);
+                } catch (IOException | RuntimeException e) {
+                    Log.w(TAG, "aod dnd: read status could not be reset");
+                }
+            }
+            handler.accept(observed);
+        });
     }
 
     private static void writeAndCheck(Attempt attempt, AodSetting expected) {
@@ -207,17 +234,37 @@ public final class MarkusAodSync {
             }
 
             @Override public void onError(String ignored, int type, int error) {
-                WORKER.execute(() -> fail(attempt, "request failed, code " + error));
+                WORKER.execute(() -> {
+                    if (active != attempt) return;
+                    try {
+                        if (request.d == AodRequest.READ_SUBTYPE && stillConnected(attempt) && attempt.saved() == null
+                                && AodReadStatus.record(attempt.readStatus, error)) {
+                            Log.w(TAG, "aod dnd: repeated read rejection, automatic AOD paused for this firmware");
+                        }
+                    } catch (IOException | RuntimeException e) {
+                        Log.w(TAG, "aod dnd: read status could not be saved");
+                    }
+                    fail(attempt, "request failed, code " + error);
+                });
             }
         });
     }
 
     private static boolean stillConnected(Attempt attempt) {
-        return attempt.identity.equals(connectedBand());
+        return attempt.identity.equals(connectedBand(MarkusZenSync.currentDevice()));
     }
 
-    private static String connectedBand() {
-        DeviceModel model = MarkusZenSync.currentDevice();
+    private static File readStatus(Context context, DeviceModel model, String identity) {
+        try {
+            DeviceInfo info = model.getDeviceInfo();
+            String firmware = info == null ? null : info.getFirmwareVersion();
+            return AodReadStatus.file(context.getFilesDir(), identity, firmware);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static String connectedBand(DeviceModel model) {
         if (!supported(model) || !model.isDeviceConnected()) return null;
         String identity = model.getDid();
         return identity == null || identity.isEmpty() ? null : identity;
@@ -270,11 +317,13 @@ public final class MarkusAodSync {
         final String identity;
         final SharedPreferences preferences;
         final String key;
+        final File readStatus;
         ScheduledFuture<?> timeout;
 
-        Attempt(String identity, SharedPreferences preferences) {
+        Attempt(String identity, SharedPreferences preferences, File readStatus) {
             this.identity = identity;
             this.preferences = preferences;
+            this.readStatus = readStatus;
             key = UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)).toString();
         }
 

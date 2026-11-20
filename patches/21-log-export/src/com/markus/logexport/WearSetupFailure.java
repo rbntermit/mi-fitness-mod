@@ -24,8 +24,11 @@ public final class WearSetupFailure {
     }
 
     public static void noteConsentFailure(Exception error) {
-        Log.w(TAG, "wear setup: consent check failed, type=" + error.getClass().getSimpleName()
-                + (error instanceof ApiException ? ", status=" + ((ApiException) error).getStatusCode() : ""));
+        String details = error instanceof ApiException ? ", status=" + ((ApiException) error).getStatusCode() : "";
+        if (error instanceof SecurityException) {
+            details += ", reason=" + ConsentFailureReason.classify(error.getMessage()).name();
+        }
+        Log.w(TAG, "wear setup: consent check failed, type=" + error.getClass().getSimpleName() + details);
     }
 
     public static void show(Activity activity, SetupNavigator navigator) {

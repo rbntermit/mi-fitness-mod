@@ -1,11 +1,13 @@
 /** Stock mailbox requests from AODSettingViewModel. */
 final class AodRequest {
+    static final int READ_SUBTYPE = 0x41;
+
     private AodRequest() {}
 
     static t3u read() {
         t3u packet = new t3u();
         packet.c = 2;
-        packet.d = 0x41;
+        packet.d = READ_SUBTYPE;
         return packet;
     }
 
