@@ -54,6 +54,12 @@ public final class LogExport {
                 .putExtra(LogExportActivity.EXTRA_MODE, LogExportActivity.MODE_APP));
     }
 
+    static void openLoginLog(Activity activity) {
+        start(activity, new Intent(activity, LogExportActivity.class)
+                .putExtra(LogExportActivity.EXTRA_MODE, LogExportActivity.MODE_LOGIN)
+                .putExtra(LogExportActivity.EXTRA_LOGIN_TRACE, LoginDiagnostics.snapshot()));
+    }
+
     private static void start(Context context, Intent i) {
         if (!(context instanceof Activity)) {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

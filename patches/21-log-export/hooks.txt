@@ -52,3 +52,92 @@ METHOD invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 AT after check-cast p1, Ljava/lang/Exception;
 CODE
     invoke-static {p1}, Lcom/markus/logexport/WearSetupFailure;->noteConsentFailure(Ljava/lang/Exception;)V
+
+# Fixed stages only. Never forward the Passport bundle, form input or exception text.
+CLASS com/xiaomi/passport/ui/page/AccountLoginActivity
+METHOD onCreate(Landroid/os/Bundle;)V
+AT after invoke-super \{p0, p1\}, Lcom/xiaomi/passport/ui/internal/LayoutWrapperActivity;->onCreate
+CODE
+    invoke-static {}, Lcom/markus/logexport/LoginDiagnostics;->begin()V
+
+# The SDK makes this loading dialog non-cancelable. Its neutral button opens a way out without changing authorization.
+CLASS com/xiaomi/passport/ui/page/BaseLoginFragment
+METHOD initVars()V
+AT after invoke-virtual \{v1, v3\}, Landroid/app/Dialog;->setCancelable\(Z\)V
+CODE
+    invoke-virtual {p0}, Landroidx/fragment/app/Fragment;->getActivity()Landroidx/fragment/app/FragmentActivity;
+    move-result-object v4
+    invoke-static {v4}, Lcom/markus/logexport/LoginDiagnostics;->help(Landroid/app/Activity;)Landroid/view/View$OnClickListener;
+    move-result-object v4
+    const-string v3, "\u041f\u043e\u043c\u043e\u0449\u044c \u0441\u043e \u0432\u0445\u043e\u0434\u043e\u043c"
+    invoke-virtual {v1, v3, v4}, Lcom/xiaomi/passport/ui/view/PassportDialog;->setNeutralButton(Ljava/lang/String;Landroid/view/View$OnClickListener;)Lcom/xiaomi/passport/ui/view/PassportDialog;
+    const/4 v3, 0x0
+
+CLASS com/xiaomi/passport/ui/utils/LoginAndRegisterController
+METHOD loginIdPassword(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/xiaomi/passport/callback/LoginIdPasswordCallback;)Lcom/xiaomi/passport/uicontroller/SimpleFutureTask;
+TEMPS 1
+CODE
+    const-string v0, "password_request_started"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/utils/LoginAndRegisterController
+METHOD loginSNS(Landroid/content/Context;Lcom/xiaomi/passport/ui/internal/AuthProvider;Lcom/xiaomi/passport/ui/internal/AuthCredential;Lcom/xiaomi/passport/ui/page/DefaultLoginCallback;)V
+TEMPS 1
+CODE
+    const-string v0, "provider_request_started"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/page/VerifyCodeLoginFragment$1
+METHOD onInputCompleted(Ljava/lang/String;)V
+TEMPS 1
+CODE
+    const-string v0, "sms_code_submitted"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/page/PasswordLoginFragment$_LoginIdPasswordCallback
+METHOD onLoginFailed(Ljava/lang/String;)V
+TEMPS 1
+CODE
+    const-string v0, "password_login_failed"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/page/PasswordLoginFragment$_LoginIdPasswordCallback
+METHOD onNeedCaptchaCode(ZLjava/lang/String;)V
+TEMPS 1
+CODE
+    const-string v0, "password_captcha_required"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/page/PasswordLoginFragment$_LoginIdPasswordCallback
+METHOD onNeedNotification(Ljava/lang/String;Ljava/lang/String;)V
+TEMPS 1
+CODE
+    const-string v0, "password_verification_required"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/page/PasswordLoginFragment$_LoginIdPasswordCallback
+METHOD onServerError(Lcom/xiaomi/passport/uicontroller/PhoneLoginController$ErrorCode;Lcom/xiaomi/accountsdk/account/serverpassthrougherror/data/PassThroughErrorInfo;)V
+TEMPS 1
+CODE
+    const-string v0, "password_error_callback_received"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/utils/LoginAndRegisterController
+METHOD storePassToken(Landroid/content/Context;Lcom/xiaomi/accountsdk/account/data/AccountInfo;)V
+TEMPS 1
+CODE
+    const-string v0, "passport_account_storage_started"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/passport/ui/utils/LoginAndRegisterController
+METHOD finishWithLoginResult(Landroid/app/Activity;Lcom/xiaomi/accountsdk/account/data/AccountInfo;Lcom/xiaomi/passport/ui/license/LoginAgreementAndPrivacy;)V
+TEMPS 1
+CODE
+    const-string v0, "passport_reporting_result"
+    invoke-static {v0}, Lcom/markus/logexport/LoginDiagnostics;->mark(Ljava/lang/String;)V
+
+CLASS com/xiaomi/fitness/login/LoginSupportActivity
+METHOD activityForResult$lambda$0(Lcom/xiaomi/fitness/login/LoginSupportActivity;Landroidx/activity/result/ActivityResult;)V
+AT after move-result p1
+CODE
+    invoke-static {p1}, Lcom/markus/logexport/LoginDiagnostics;->result(I)V

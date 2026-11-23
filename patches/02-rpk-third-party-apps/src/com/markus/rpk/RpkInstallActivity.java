@@ -360,7 +360,8 @@ public class RpkInstallActivity extends Activity {
                 finishWith("Установлено на браслет.");
                 break;
             case TRANSMIT_FAILED:
-                finishWith("Не удалось передать на браслет" + e + ".");
+                finishWith("Не удалось передать приложение" + e + ". Проверьте подключение и убедитесь, "
+                        + "что файл RPK подходит для точной модели часов.");
                 break;
             case INSTALL_FAILED:
                 finishWith("Браслет не установил приложение" + e + ".");

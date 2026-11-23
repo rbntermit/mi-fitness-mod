@@ -52,3 +52,12 @@ METHOD getWearosWatch(Ljava/lang/String;)Lcom/google/android/libraries/wear/comp
 AT before return-object p1
 CODE
     invoke-static {p1}, Lcom/markus/facefix/WatchCompat;->noteWearResult(Ljava/lang/Object;)V
+
+
+# Local files used to close the picker silently when preparation failed. Leave the stock and success paths intact.
+CLASS com/markus/PrepareInstallCallback
+METHOD invoke(Ljava/lang/Boolean;Ljava/lang/Integer;Ljava/lang/Integer;)Lkotlin/Unit;
+AT before new-instance p1, Landroid/os/Handler;
+CODE
+    iget-object v0, p0, Lcom/markus/PrepareInstallCallback;->activity:Landroidx/fragment/app/FragmentActivity;
+    invoke-static {v0, p2}, Lcom/markus/facefix/FaceInstallFeedback;->rejected(Landroid/app/Activity;Ljava/lang/Integer;)V

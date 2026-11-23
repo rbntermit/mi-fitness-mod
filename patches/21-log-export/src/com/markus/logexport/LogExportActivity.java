@@ -58,6 +58,8 @@ public class LogExportActivity extends Activity {
     static final String EXTRA_DIR = "markus_log_dir";
     static final String MODE_BAND = "band";
     static final String MODE_APP = "app";
+    static final String MODE_LOGIN = "login";
+    static final String EXTRA_LOGIN_TRACE = "markus_login_trace";
     static final int APP_LOG_MINUTES = 15;
     private static final int REQUEST_SAVE = 7;
     private static final long POLL_MS = 3000;
@@ -90,7 +92,8 @@ public class LogExportActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         boolean band = MODE_BAND.equals(getIntent().getStringExtra(EXTRA_MODE));
-        setTitle(band ? "Журнал браслета" : "Журнал приложения");
+        boolean login = MODE_LOGIN.equals(getIntent().getStringExtra(EXTRA_MODE));
+        setTitle(login ? "Журнал входа" : band ? "Журнал браслета" : "Журнал приложения");
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
@@ -99,16 +102,16 @@ public class LogExportActivity extends Activity {
         scroll.addView(content);
         setContentView(scroll);
 
-        TextView warn = text(PRIVACY);
+        TextView warn = text(login ? "Журнал содержит этапы входа и время между ними." : PRIVACY);
         warn.setTypeface(null, Typeface.BOLD);
         content.addView(warn);
-        status = text(band ? "Ждём журнал от браслета…"
+        status = text(login ? "Готовлю журнал входа…" : band ? "Ждём журнал от браслета…"
                 : "Чтобы поймать ошибку целиком, нажмите «Начать запись», повторите то, что не работает, вернитесь сюда "
                         + "и нажмите «Остановить и сохранить». На некоторых телефонах (OnePlus и другие) система хранит "
                         + "только последнюю минуту журнала, поэтому запись надёжнее.");
         status.setPadding(0, dp(16), 0, dp(16));
         content.addView(status);
-        if (!band) {
+        if (!band && !login) {
             record = button("Начать запись", v -> toggleRecording());
             content.addView(record);
             snapshot = button("Последние " + APP_LOG_MINUTES + " минут", v -> {
@@ -134,7 +137,29 @@ public class LogExportActivity extends Activity {
             pollBand();
         } else {
             mime = "text/plain";
-            showRecorder();
+            if (login) {
+                String trace = getIntent().getStringExtra(EXTRA_LOGIN_TRACE);
+                io.execute(() -> prepareLoginLog(trace));
+            } else {
+                showRecorder();
+            }
+        }
+    }
+
+    private void prepareLoginLog(String trace) {
+        try {
+            if (trace == null) {
+                throw new IOException("нет данных диагностики");
+            }
+            File out = new File(exportDir(), "mi-fitness-login-" + stamp() + ".txt");
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(out), StandardCharsets.UTF_8)) {
+                writer.write("# Mi Fitness Mod " + versionText() + "\n");
+                writer.write(trace);
+            }
+            main.post(() -> ready(out, "Журнал входа готов. Сохраните файл или поделитесь им."));
+        } catch (IOException | RuntimeException e) {
+            Log.w(TAG, "login trace export failed");
+            main.post(() -> failed("Не удалось подготовить журнал входа."));
         }
     }
 
