@@ -1,0 +1,5 @@
+<string name="markus_import_phone_alarm">Use next phone alarm time</string>
+<string name="markus_import_phone_alarm_none">There is no upcoming alarm on the phone</string>
+<string name="markus_import_phone_alarm_later">This alarm cannot be set for that date on the band</string>
+<string name="markus_import_phone_alarm_date_note">The next phone alarm is scheduled for %1$s.\nWith the one-time setting, the band alarm would be scheduled for %2$s.\n\nYou can copy the hour and minute and choose a repeat schedule before saving.</string>
+<string name="markus_import_phone_alarm_time_only">Use time only</string>

@@ -1,0 +1,6 @@
+# Add the button after the stock editor has initialized its input and accessibility state.
+CLASS com/xiaomi/fitness/devicesettings/base/clock/AlarmClockAddFragment
+METHOD onViewCreated(Landroid/view/View;Landroid/os/Bundle;)V
+AT before return-void
+CODE
+    invoke-static {p0}, Lcom/markus/alarm/PhoneAlarmImport;->attach(Lcom/xiaomi/fitness/devicesettings/base/clock/AlarmClockAddFragment;)V

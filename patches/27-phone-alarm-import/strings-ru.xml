@@ -1,0 +1,5 @@
+<string name="markus_import_phone_alarm">Взять время ближайшего будильника с телефона</string>
+<string name="markus_import_phone_alarm_none">На телефоне нет ближайшего будильника</string>
+<string name="markus_import_phone_alarm_later">На браслете нельзя поставить будильник на эту дату</string>
+<string name="markus_import_phone_alarm_date_note">Ближайший будильник телефона назначен на %1$s.\nВ режиме «Один раз» будильник браслета будет назначен на %2$s.\n\nМожно подставить только часы и минуты и выбрать «Повтор» перед сохранением.</string>
+<string name="markus_import_phone_alarm_time_only">Взять только время</string>
